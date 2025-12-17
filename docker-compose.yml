@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: gpj_backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      # Mount local code to container
+      - .:/app
+      # Use named volume for node_modules to avoid conflicts
+      - /app/node_modules
+    restart: unless-stopped
+
+volumes:
+  node_modules:
