@@ -1,5 +1,7 @@
 const axios = require('axios');
 const XLSX = require('xlsx');
+const JSZip = require('jszip');
+const xml2js = require('xml2js');
 const S3 = require('../libraries/s3/s3.lib.js');
 
 class FileConverter {
@@ -17,10 +19,10 @@ class FileConverter {
         };
         
         // Formats that need text extraction
-        this.textExtractionFormats = ['xlsx', 'xls'];
+        this.textExtractionFormats = ['xlsx', 'xls', 'pptx', 'ppt'];
         
         // Formats not yet supported
-        this.unsupportedFormats = ['docx', 'doc', 'pptx', 'ppt'];
+        this.unsupportedFormats = ['docx', 'doc'];
     }
 
     /**
@@ -72,6 +74,86 @@ class FileConverter {
     }
 
     /**
+     * Extract text content from PPTX file
+     * @param {Buffer} buffer - The PPTX file buffer
+     * @returns {Promise<string>} - Extracted text content
+     */
+    async extractTextFromPPTX(buffer) {
+        try {
+            const zip = await JSZip.loadAsync(buffer);
+            let textContent = '';
+            const parser = new xml2js.Parser();
+            
+            // Get all slide files
+            const slideFiles = Object.keys(zip.files)
+                .filter(name => name.match(/ppt\/slides\/slide\d+\.xml/))
+                .sort();
+
+            for (let i = 0; i < slideFiles.length; i++) {
+                const slideFile = slideFiles[i];
+                const slideXml = await zip.files[slideFile].async('text');
+                
+                textContent += `\n${'='.repeat(50)}\n`;
+                textContent += `Slide ${i + 1}\n`;
+                textContent += `${'='.repeat(50)}\n\n`;
+
+                try {
+                    const result = await parser.parseStringPromise(slideXml);
+                    
+                    // Extract text from all text elements
+                    const extractTextFromNode = (node) => {
+                        if (!node) return '';
+                        
+                        let text = '';
+                        
+                        if (typeof node === 'string') {
+                            return node;
+                        }
+                        
+                        if (Array.isArray(node)) {
+                            node.forEach(item => {
+                                text += extractTextFromNode(item);
+                            });
+                            return text;
+                        }
+                        
+                        if (typeof node === 'object') {
+                            // Look for text in 'a:t' elements (text runs)
+                            if (node['a:t']) {
+                                if (Array.isArray(node['a:t'])) {
+                                    text += node['a:t'].join(' ') + ' ';
+                                } else {
+                                    text += node['a:t'] + ' ';
+                                }
+                            }
+                            
+                            // Recursively process all properties
+                            Object.keys(node).forEach(key => {
+                                if (key !== 'a:t') {
+                                    text += extractTextFromNode(node[key]);
+                                }
+                            });
+                        }
+                        
+                        return text;
+                    };
+                    
+                    const slideText = extractTextFromNode(result);
+                    textContent += slideText.trim() + '\n\n';
+                    
+                } catch (parseError) {
+                    console.error(`Failed to parse slide ${i + 1}:`, parseError.message);
+                    textContent += '[Unable to extract text from this slide]\n\n';
+                }
+            }
+            
+            return textContent || '[No text content found in presentation]';
+        } catch (error) {
+            throw new Error(`Failed to extract text from PPTX: ${error.message}`);
+        }
+    }
+
+    /**
      * Download a file from S3 using signed URL and convert to Gemini-compatible format
      * @param {string} s3Key - The S3 object key (file path)
      * @param {string} mimeType - MIME type of the file (e.g., 'application/pdf'). If not provided, will auto-detect from filename
@@ -91,11 +173,17 @@ class FileConverter {
 
             const buffer = Buffer.from(response.data);
 
-            // Check if this is an XLSX file that needs text extraction
+            // Check if this file needs text extraction
             if (this.textExtractionFormats.includes(extension)) {
-                console.log(`Extracting text from XLSX: ${s3Key}`);
-                const textContent = this.extractTextFromXLSX(buffer);
-                return textContent; // Return as plain text
+                if (extension === 'xlsx' || extension === 'xls') {
+                    console.log(`Extracting text from XLSX: ${s3Key}`);
+                    const textContent = this.extractTextFromXLSX(buffer);
+                    return textContent; // Return as plain text
+                } else if (extension === 'pptx' || extension === 'ppt') {
+                    console.log(`Extracting text from PPTX: ${s3Key}`);
+                    const textContent = await this.extractTextFromPPTX(buffer);
+                    return textContent; // Return as plain text
+                }
             }
 
             // For supported binary formats (PDF, images), return as inline data

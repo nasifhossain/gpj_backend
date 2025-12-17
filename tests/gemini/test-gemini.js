@@ -50,10 +50,30 @@ async function testGemini() {
         );
         
         console.log('\n=== XLSX Analysis Response ===');
-        console.log(xlsxResponse);
+        console.log(xlsxResponse.substring(0, 300) + '...');
+
+        // Test 4: Prompt with PPTX from S3 (text extraction)
+        console.log('\n=== Test 4: Prompt with PPTX from S3 ===');
+        
+        // Replace this with an actual PPTX key from your S3 bucket
+        const pptxS3Key = 'test-folder/sample-presentation.pptx';
+        
+        console.log(`Fetching PPTX from S3: ${pptxS3Key}`);
+        const pptxContent = await fileConverter.getFileFromS3ForGemini(pptxS3Key); // Returns extracted text
+        
+        console.log('Extracted PPTX Content Preview:');
+        console.log(pptxContent.substring(0, 500) + '...\n');
+        
+        console.log('Sending PPTX data with prompt to Gemini...');
+        const pptxResponse = await gemini.getResponse(
+            `Here is the content from a PowerPoint presentation:\n\n${pptxContent}\n\nPlease analyze this presentation and provide a summary of the main topics, key points, and overall structure.`
+        );
+        
+        console.log('\n=== PPTX Analysis Response ===');
+        console.log(pptxResponse);
         
         console.log('\n=== Test completed successfully ===');
-        console.log('\nSupported formats: PDF, PNG, JPG, JPEG, WEBP, GIF (binary), XLSX/XLS (text extraction)');
+        console.log('\nSupported formats: PDF, PNG, JPG, JPEG, WEBP, GIF (binary), XLSX/XLS, PPTX/PPT (text extraction)');
     } catch (error) {
         console.error('Error:', error.message);
         console.error('Stack:', error.stack);
