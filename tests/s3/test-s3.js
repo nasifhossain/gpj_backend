@@ -11,13 +11,13 @@ async function testS3() {
 
         // Test upload signed URL generation
         console.log('\n=== Generating Upload Signed URL ===');
-        const uploadKey = 'test-folder/sample-file.pdf';
-        const uploadUrl = await s3.generateUploadSignedUrl(uploadKey, 3600, 'application/pdf');
+        const uploadKey = 'test-folder/sample-excel.xlsx';
+        const uploadUrl = await s3.generateUploadSignedUrl(uploadKey, 3600, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         console.log('Upload URL:', uploadUrl);
 
         // Test download signed URL generation
         console.log('\n=== Generating Download Signed URL ===');
-        const downloadKey = 'test-folder/existing-file.pdf';
+        const downloadKey = 'test-folder/sample-excel.xlsx';
         const downloadUrl = await s3.generateDownloadSignedUrl(downloadKey, 3600);
         console.log('Download URL:', downloadUrl);
 
