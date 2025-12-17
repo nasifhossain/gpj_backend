@@ -31,11 +31,19 @@ class Gemini {
             throw new Error("Prompt is required");
         }
 
-        // TODO: Implement file handling for pdf, ppt, xlsx, docs
-        // For now, only handle text prompt
-
         try {
-            const result = await this.model.generateContent(prompt);
+            let content;
+
+            // If files are provided, include them with the prompt
+            if (inputFiles && inputFiles.length > 0) {
+                // Build content array with prompt and files
+                content = [prompt, ...inputFiles];
+            } else {
+                // Only text prompt
+                content = prompt;
+            }
+
+            const result = await this.model.generateContent(content);
             const response = await result.response;
             return response.text();
         } catch (error) {
