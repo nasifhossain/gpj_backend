@@ -1,4 +1,5 @@
-const Gemini = require('./libraries/gemini.lib.js');
+const Gemini = require("../../libraries/gemini/gemini.lib.js");
+
 
 async function testGemini() {
     try {
