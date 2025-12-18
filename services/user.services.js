@@ -1,7 +1,7 @@
 
 const prisma = require('../config/prisma.client').prisma;
  const bcrypt = require('bcrypt');
-const generateToken = require('../libraries/jwt/genarate_token');
+const {generateToken} = require('../libraries/jwt/jwt');
 // const prisma = new PrismaClient();
 
 const createUser = async (userData) => {
