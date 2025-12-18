@@ -89,63 +89,80 @@ class FileConverter {
                 .filter(name => name.match(/ppt\/slides\/slide\d+\.xml/))
                 .sort();
 
-            for (let i = 0; i < slideFiles.length; i++) {
-                const slideFile = slideFiles[i];
-                const slideXml = await zip.files[slideFile].async('text');
+            // Helper function to extract text from XML nodes
+            const extractTextFromNode = (node) => {
+                if (!node) return '';
                 
+                let text = '';
+                
+                if (typeof node === 'string') {
+                    return node;
+                }
+                
+                if (Array.isArray(node)) {
+                    node.forEach(item => {
+                        text += extractTextFromNode(item);
+                    });
+                    return text;
+                }
+                
+                if (typeof node === 'object') {
+                    // Look for text in 'a:t' elements (text runs)
+                    if (node['a:t']) {
+                        if (Array.isArray(node['a:t'])) {
+                            text += node['a:t'].join(' ') + ' ';
+                        } else {
+                            text += node['a:t'] + ' ';
+                        }
+                    }
+                    
+                    // Recursively process all properties
+                    Object.keys(node).forEach(key => {
+                        if (key !== 'a:t') {
+                            text += extractTextFromNode(node[key]);
+                        }
+                    });
+                }
+                
+                return text;
+            };
+
+            // Process all slides in parallel using Promise.allSettled
+            const slidePromises = slideFiles.map(async (slideFile, i) => {
+                try {
+                    const slideXml = await zip.files[slideFile].async('text');
+                    const result = await parser.parseStringPromise(slideXml);
+                    const slideText = extractTextFromNode(result);
+                    
+                    return {
+                        slideNumber: i + 1,
+                        text: slideText.trim()
+                    };
+                } catch (error) {
+                    console.error(`Failed to parse slide ${i + 1}:`, error.message);
+                    return {
+                        slideNumber: i + 1,
+                        text: '[Unable to extract text from this slide]',
+                        error: true
+                    };
+                }
+            });
+
+            const slideResults = await Promise.allSettled(slidePromises);
+
+            // Build text content from results in order
+            slideResults.forEach((result, i) => {
                 textContent += `\n${'='.repeat(50)}\n`;
                 textContent += `Slide ${i + 1}\n`;
                 textContent += `${'='.repeat(50)}\n\n`;
 
-                try {
-                    const result = await parser.parseStringPromise(slideXml);
-                    
-                    // Extract text from all text elements
-                    const extractTextFromNode = (node) => {
-                        if (!node) return '';
-                        
-                        let text = '';
-                        
-                        if (typeof node === 'string') {
-                            return node;
-                        }
-                        
-                        if (Array.isArray(node)) {
-                            node.forEach(item => {
-                                text += extractTextFromNode(item);
-                            });
-                            return text;
-                        }
-                        
-                        if (typeof node === 'object') {
-                            // Look for text in 'a:t' elements (text runs)
-                            if (node['a:t']) {
-                                if (Array.isArray(node['a:t'])) {
-                                    text += node['a:t'].join(' ') + ' ';
-                                } else {
-                                    text += node['a:t'] + ' ';
-                                }
-                            }
-                            
-                            // Recursively process all properties
-                            Object.keys(node).forEach(key => {
-                                if (key !== 'a:t') {
-                                    text += extractTextFromNode(node[key]);
-                                }
-                            });
-                        }
-                        
-                        return text;
-                    };
-                    
-                    const slideText = extractTextFromNode(result);
-                    textContent += slideText.trim() + '\n\n';
-                    
-                } catch (parseError) {
-                    console.error(`Failed to parse slide ${i + 1}:`, parseError.message);
+                if (result.status === 'fulfilled') {
+                    textContent += result.value.text + '\n\n';
+                } else {
+                    console.error(`Slide ${i + 1} promise rejected:`, result.reason);
                     textContent += '[Unable to extract text from this slide]\n\n';
                 }
-            }
+            });
             
             return textContent || '[No text content found in presentation]';
         } catch (error) {
