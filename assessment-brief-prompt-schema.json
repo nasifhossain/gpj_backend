@@ -1,0 +1,593 @@
+{
+    "templateName": "Default Template",
+    "sections": [
+        {
+            "sectionName": "Project Overview",
+            "inputFields": [
+                {
+                    "fieldsHeading": "Basic Details",
+                    "fields": [
+                        {
+                            "inputName": "Project Name",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "please find only the exact project name/job name for the event  '{event_name}' from the provided context"
+                        },
+                        {
+                            "inputName": "Project Type",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "dropdown",
+                            "options": [
+                                "3rd party",
+                                "Proprietary",
+                                "Research/Project"
+                            ]
+                        },
+                        {
+                            "inputName": "EMB",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact EMB number (e.g., GDDQJHMB,UACBLCMB) for the event  '{event_name}'  from the provided context. If no EMB number is found, respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "Event Tier",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "dropdown",
+                            "options": [
+                                "1",
+                                "2",
+                                "3"
+                            ]
+                        },
+                        {
+                            "inputName": "Project Number",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt":"Extract only the exact project/job number for the event  '{event_name}'  from the provided context. If no project/job number is found, respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "Event Format",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "dropdown",
+                            "options": [
+                                "Face-to-Face",
+                                "Virtual",
+                                "Hybrid"
+                            ]
+                        },
+                        {
+                            "inputName": "Event date",
+                            "inputValue": null,
+                            "dataType": "Date",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact Event start Date for the event  '{event_name}'  from the provided context. If no Event start Date is found, respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "Venue",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact Event venue  for the event  '{event_name}'  from the provided context. If no Event venue is found, respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "City",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact City no country were the event is conducted  for the event  '{event_name}'  from the provided context. If no City is found, respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "Country",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact Country name not city were the event is conducted  for the event  '{event_name}'  from the provided context. If no Country name  is found but state code is given then using state code and find the country name,if no state code are name then respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "Producer",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact  Producer name for the event  '{event_name}'  from the provided context. If no  Producer name is found, respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "Forecasted Budget",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact  total Forecasted  Budget for the event  '{event_name}'  from the provided context. If no total Forecasted  Budget  is found, respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "Sponsorship Level",
+                            "inputValue": null,
+                           "dataType": "String",
+                            "fieldType": "dropdown",
+                            "options": [
+                                "Level-1",
+                                "Level-2",
+                                "Level-3"
+                            ]
+                        },
+                        {
+                            "inputName": "Website",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact  Event Website for the event  '{event_name}' from the provided context. If no Event Website is found, respond with 'Nil' only."
+                        },
+                        {
+                            "inputName": "Booth Size",
+                            "inputValue": null,
+                            "dataType": "String",
+                            "fieldType": "input",
+                            "prompt": "Extract only the exact Booth Size for the event  '{event_name}'  from the provided context. If no Booth Size is found, respond with 'Nil' only."
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Sponsorship Components",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Keynote/mainstage, Meeting rooms, Surround Branding, Sessions, Workshops, VIP Events, Roundtable, Booth, Non-traditional Tactics,  Digital Tactics, Advertorial, Signage, Conference Passes, Others"
+                            ],
+                            "prompt": "Please compile a summary less then 50 words  of all exhibitor and sponsorship benefits (such as booth specifications, pass allocations, VIP lounge access, speaking opportunities, branding options, meeting spaces, networking events, and any associated fees or requirements) . Organize the answer by category (e.g., Interact, Engage, Network, Brand, etc.), and clearly highlight any unique or critical details, eligibility criteria, or costs for each benefit."
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "sectionName": "Project Stakeholders",
+            "inputFields": [
+                {
+                    "fieldsHeading": "Client Information",
+                    "fields": [
+                        {
+                            "inputName": "Executive Sponsor",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input",
+                            "prompt": "Search for the  IBM FM (Field Marketer)"
+                        },
+                        {
+                            "inputName": "Event SPOC",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input",
+                            "prompt": "Search for the IBM Event Strategist"
+                        },
+                        {
+                            "inputName": "Content Lead",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input",
+                            "prompt": "Search for the Assigned Experience Strategist"
+                        },
+                        {
+                            "inputName": "Demand Strategist",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input"
+                        },
+                        {
+                            "inputName": "Field Marketer",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input"
+                        },
+                        {
+                            "inputName": "Sales Lead",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input"
+                        },
+                        {
+                            "inputName": "Commas Lead",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "GPJ Information",
+                    "fields": [
+                        {
+                            "inputName": "Producer",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input"
+                        },
+                        {
+                            "inputName": "Account Lead",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input"
+                        },
+                        {
+                            "inputName": "Experience Designer",
+                            "inputValue": {
+                                "Name": null,
+                                "Email": null
+                            },
+                            "dataType": "Object",
+                            "fieldType": "input"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "sectionName": "Objectives & Audience",
+            "inputFields": [
+                {
+                    "fieldsHeading": "Objective",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "What are the primary objectives of the event? Audience, Industry & Brand Perspective"
+                            ],
+                            "prompt": "What are the primary objectives of the event?\n\n1. From an audience perspective:\n2. From an industry perspective:\n3. From a brand perspective:"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Client Journey (Full Funnel Measurement)",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Awareness, Consideration, Perception, Action, Qualify, Usage, Progress, Loyalty, Advocacy"
+                            ],
+                            "prompt": "At which stage of their journey are the clients you are intending to engage with at this event? And where do you want to move them to:\n\n1. Awareness\n2. Perception\n3. Consideration\n4. Action\n5. Qualify\n6. Progress\n7. Usage\n8. Loyalty\n9. Advocacy\n\nIf the question highlights the stages Qualify, Progress, Usage, Loyalty, Advocacy, how do you intend to progress this audience through this part of the funnel?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Outcomes & Targets",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Which pillars would be addressed in this client journey?",
+                                "What are the desired outcomes/targets? CS, CI, SQL, SQL Revenue, Win Revenue",
+                                "Progression Revenue"
+                            ],
+                            "prompt": "Which of the three core pillars will be addressed in this client journey?\n\n1. Improve awareness and consideration for IBM capabilities\n2. Increase demand generation and yield\n3. Drive productivity and efficiency\n\n4 Suggest any other qualitative KPIs of interest?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Previous Year Results",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "CS, CI, SQL Revenue, Win Revenue, Progression"
+                            ],
+                            "prompt": "Targets vs previous results\n---------------------------------------------------\n\nPrevious Year results:\n1. Client Interest\n2. Client Signal\n3. SQLs\n4. SQL revenue\n5. Win revenue\n\nTargets:\n1. Client Interest\n2. Client Signal\n3. SQLs\n4. SQL revenue\n5. Win revenue"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Target Audience",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Who is the audience at this event?",
+                                "Why do they attend?",
+                                "Which buying groups will be targeted?",
+                                "Is NCA an objective?",
+                                "Insights on the target audience’s business challenges?"
+                            ],
+                            "prompt": "Who is the audience at this event?\n2. Why do they attend this event?\n3. Which buying groups will you be targeting? (Account segments, Industry focus, Job roles/levels)\n4. Is NCA an objective? Yes/No.\n   If yes, what targets have you identified for this third-party event?\n5. What insights do we have on the target audience’s current business challenges and areas of interest?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Relationship",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "What is the current relationship of the target audience listed above?",
+                                "How do you intend to drive retention/expansion?",
+                                "How do you intend to drive progression at this event?"
+                            ],
+                            "prompt": "What is the current relationship of the target audiences listed above to IBM and its partners? How do you plan to leverage this event to drive retention, expansion, and progression among these audiences?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Industry Context & Brand Perception",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Current awareness of IBM",
+                                "Desired shift in audience perception",
+                                "Announcements or activations planned?"
+                            ],
+                            "prompt": " What is the current awareness of IBM’s expertise & technology in this Industry/with this audience?\n2. What is the shift in the audience’s perception of IBM that you want to achieve?\n3. Are there any announcements, client stories or activations planned for this event?"
+
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "sectionName": "Story & Client Experience",
+            "inputFields": [
+                {
+                    "fieldsHeading": "Client Experience",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "What would make this experience great?",
+                                "What elements are important to you?",
+                                "What are your stakeholders asking?",
+                                "What have you seen elsewhere that you would like considered?",
+                                "Do you have any challenges that you are looking to overcome in meeting these objectives?"
+                            ],
+                            "prompt": "In the context of planning and executing this experience, what factors would make it truly exceptional, and what elements do you consider most important to its success? Additionally, what feedback or demands have stakeholders expressed, and are there inspiring examples from elsewhere that you’d like us to consider? Finally, are there any specific challenges or obstacles you anticipate while striving to meet these objectives?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Key Message & Value Proposition",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "What makes IBM stand out amongst the competition?",
+                                "What is the key message to this audience?",
+                                "What is the unique selling point?",
+                                "Leading themes, Sub-themes/pillars"
+                            ],
+                            "prompt": "In this event context, what differentiates IBM from its competitors, and what is the primary message for our target audience? Additionally, what is the unique selling point that sets IBM apart, and how should our leading theme, along with its sub-themes or pillars, be structured to emphasize these key differentiators?."
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Use Cases",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "List use cases to be features"
+                            ],
+                            "prompt": "Could you please list the specific use cases we plan to feature at this event, including any relevant links (for example, to IBM Content Hub) that will provide additional context or supporting information?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Client Stories",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Mention client stories that need to be featured"
+                            ],
+                            "prompt": "Which client stories will be highlighted at this event, and can you provide any relevant links (e.g., to the IBM Content Hub) that showcase these client success narratives?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Feature Products & Demos",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "What products/solutions are relevant to this audience?",
+                                "How do they solve pain points listed above?"
+                            ],
+                            "prompt": "What products or solutions are most relevant to this audience and how do they directly address the previously identified pain points or challenges?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Integration of the Other Parts of IBM",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "How do we collaborate with strategic partners?",
+                                "Is there anything new about the partnership that the audience you should know?",
+                                "Is consulting a priority at this event?",
+                                "What is the relationship between consulting & technologies?"
+                            ],
+                            "prompt": "How should we collaborate with our strategic partners for this event, and what new or noteworthy aspects of the partnership should the audience be aware of? Additionally, is consulting a priority at this event, and how does it intersect with our technology solutions for this particular audience?"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Other Considerations",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "If yes, what is their objective? Other considerations"
+                            ],
+                            "prompt": "Are there any additional integration considerations—such as for communications, sales, CSR, etc.—that we need to address? If so, please specify whether these are required (yes/no), outline their specific objectives, and describe any other relevant considerations"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "sectionName": "Historical Learnings",
+            "inputFields": [
+                {
+                    "fieldsHeading": "Previous Year Results",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "To what extent were you satisfied with the results from the event last year?"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Historical Learnings (If applicable)",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "What outcomes need to be considered from prior years’ experiences? What worked? What didn’t work?"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Additional Briefings / Meeting Space",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Description of this space",
+                                "Which IBMers are participating?",
+                                "Who are we targeting?",
+                                "Planned outcomes",
+                                "Will there be any content in this space?"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Considerations for Efficiency Gains",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Activations to be re-used",
+                                "Demos to be re-used",
+                                "Presentation/sessions to be re-used",
+                                "Architecture/Inventory elements to be re-used",
+                                "Could it make sense to start with the booth layout from 2023"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "sectionName": "Agency Deliverables",
+            "inputFields": [
+                {
+                    "fieldsHeading": "Event Must Haves",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea"
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Pre-designed Floor Plan",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Which floorplan typology will be used from the Blue Studio One IBM Design Toolkit?",
+                                "Demo-focused, Activations, Meetings, Mixed"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "fieldsHeading": "Blue Studio Deliverables",
+                    "fields": [
+                        {
+                            "inputValue": [],
+                            "dataType": "Array",
+                            "fieldType": "textarea",
+                            "helperText": [
+                                "Identify the elements that the Blue Studio Team will be providing to the project. E.g. White Models, 3D Renders, Color Scheme, etc."
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
