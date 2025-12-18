@@ -1,5 +1,7 @@
 const express = require('express');
 const userRoutes = require('./routes/user.routes');
+const briefRoutes = require('./routes/brief.routes');
+const sectionRoutes = require('./routes/section.routes');
 const logger = require('./helper/logger.helper');
 
 const app = express();
@@ -16,6 +18,8 @@ app.get('/', async (req, res) => {
 
 // Routes
 app.use('/users', userRoutes);
+app.use('/briefs', briefRoutes);
+app.use('/sections', sectionRoutes);
 
 // Start the server
 app.listen(PORT, () => {
