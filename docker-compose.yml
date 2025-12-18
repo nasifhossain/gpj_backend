@@ -32,8 +32,9 @@ services:
     volumes:
       # Mount local code to container
       - .:/app
-      # Use named volume for node_modules to avoid conflicts
-      - node_modules:/app/node_modules
+      # Exclude node_modules and generated to use container's versions
+      # - /app/node_modules
+      # - /app/generated
     networks:
       - gpj_network
     depends_on:
