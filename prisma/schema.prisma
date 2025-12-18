@@ -1,0 +1,202 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
+
+enum UserRole {
+  ADMIN
+  GPJ
+  CLIENT
+}
+
+enum BriefStatus {
+  DRAFT
+  IN_PROGRESS
+  AWAITING_APPROVAL
+  APPROVED
+}
+
+enum FieldSource {
+  AI
+  MANUAL
+  SHEET
+}
+
+enum DocumentType {
+  PDF
+  PPTX
+  XLSX
+  IMAGE
+}
+
+enum AuditAction {
+  CREATED
+  UPDATED
+  AI_GENERATED
+  APPROVED
+  UPLOADED
+}
+
+//////////////////////////////////////////////////////
+// USERS
+//////////////////////////////////////////////////////
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  role      UserRole
+  createdAt DateTime @default(now())
+
+  briefsCreated   Brief[]      @relation("BriefCreator")
+  fieldUpdates    FieldValue[]
+  documents       Document[]
+  approvals       Approval[]
+  auditLogs       AuditLog[]
+}
+
+//////////////////////////////////////////////////////
+// BRIEFS
+//////////////////////////////////////////////////////
+
+model Brief {
+  id           String      @id @default(uuid())
+  title        String
+  templateName String
+  status       BriefStatus @default(DRAFT)
+
+  createdById  String
+  createdBy    User        @relation("BriefCreator", fields: [createdById], references: [id])
+
+  sections     Section[]
+  documents    Document[]
+  approvals    Approval[]
+  auditLogs    AuditLog[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+//////////////////////////////////////////////////////
+// SECTIONS
+//////////////////////////////////////////////////////
+
+model Section {
+  id          String  @id @default(uuid())
+  briefId     String
+  sectionName String
+  orderIndex  Int
+
+  brief       Brief   @relation(fields: [briefId], references: [id])
+  fields      Field[]
+  approvals   Approval[]
+}
+
+//////////////////////////////////////////////////////
+// FIELDS (TEMPLATE DEFINITION)
+//////////////////////////////////////////////////////
+
+model Field {
+  id          String   @id @default(uuid())
+  sectionId   String
+
+  fieldKey    String   // stable identifier (e.g. "project_name")
+  label       String   // display name
+  dataType    String   // string, date, array, object
+  fieldType   String   // input, dropdown, textarea
+  options     Json?
+  prompt      String?
+
+  section     Section @relation(fields: [sectionId], references: [id])
+  values      FieldValue[]
+}
+
+//////////////////////////////////////////////////////
+// FIELD VALUES (AI + MANUAL DATA)
+//////////////////////////////////////////////////////
+
+model FieldValue {
+  id          String      @id @default(uuid())
+  fieldId     String
+
+  value       Json
+  source      FieldSource
+  confidence  Float?
+  modelUsed   String?
+
+  updatedById String
+  updatedBy   User        @relation(fields: [updatedById], references: [id])
+
+  field       Field       @relation(fields: [fieldId], references: [id])
+  updatedAt   DateTime    @updatedAt
+}
+
+//////////////////////////////////////////////////////
+// DOCUMENTS (S3 FILE REFERENCES)
+//////////////////////////////////////////////////////
+
+model Document {
+  id           String       @id @default(uuid())
+  briefId      String
+
+  fileName     String
+  fileType     DocumentType
+  s3Key        String
+
+  uploadedById String
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+
+  brief        Brief        @relation(fields: [briefId], references: [id])
+  uploadedAt   DateTime     @default(now())
+}
+
+//////////////////////////////////////////////////////
+// APPROVALS
+//////////////////////////////////////////////////////
+
+model Approval {
+  id           String   @id @default(uuid())
+  briefId      String
+  sectionId    String?
+
+  approvedById String
+  approvedBy   User     @relation(fields: [approvedById], references: [id])
+
+  brief        Brief    @relation(fields: [briefId], references: [id])
+  section      Section?@relation(fields: [sectionId], references: [id])
+
+  approvedAt   DateTime @default(now())
+}
+
+//////////////////////////////////////////////////////
+// AUDIT LOGS
+//////////////////////////////////////////////////////
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  entityType   String
+  entityId     String
+  action       AuditAction
+
+  performedById String
+  performedBy   User      @relation(fields: [performedById], references: [id])
+
+  briefId      String?
+  brief        Brief?      @relation(fields: [briefId], references: [id])
+
+  createdAt    DateTime   @default(now())
+}

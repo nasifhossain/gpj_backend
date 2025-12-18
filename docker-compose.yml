@@ -1,6 +1,26 @@
-version: '3.8'
-
 services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: gpj_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gpj_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gpj_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Application
   backend:
     build: .
     container_name: gpj_backend
@@ -8,12 +28,60 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/gpj_db
     volumes:
       # Mount local code to container
       - .:/app
       # Use named volume for node_modules to avoid conflicts
       - /app/node_modules
+    networks:
+      - gpj_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run dev"
+
+  # Prisma Studio - Database Visualizer
+  prisma-studio:
+    build: .
+    container_name: gpj_prisma_studio
+    ports:
+      - "5555:5555"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/gpj_db
+      - BROWSER=none
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - gpj_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    command: npx prisma studio --port 5555 --browser none
+
+  # pgAdmin - Alternative Database Visualizer
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: gpj_pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - gpj_network
     restart: unless-stopped
 
 volumes:
   node_modules:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  gpj_network:
+    driver: bridge
