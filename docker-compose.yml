@@ -64,9 +64,8 @@ services:
     command: npx prisma studio --port 5555 --browser none
 
 volumes:
-  node_modules:
   postgres_data:
-  pgadmin_data:
+  
 
 networks:
   gpj_network:

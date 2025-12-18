@@ -2,3 +2,6 @@ node_modules/
 
 .env
 /generated/prisma
+
+# Logs
+storage/logs/**/*.log

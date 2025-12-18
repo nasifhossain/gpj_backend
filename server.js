@@ -1,5 +1,6 @@
 const express = require('express');
 const userRoutes = require('./routes/user.routes');
+const logger = require('./helper/logger.helper');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,6 +10,7 @@ app.use(express.json());
 app.get('/', async (req, res) => {
   const prisma = require('./config/prisma.client').prisma;
   const users = await prisma.user.count();
+  logger.access(`GET / - Users count: ${users}`);
   res.send('Hello World!, Users: ' + JSON.stringify(users));
 });
 
@@ -17,5 +19,7 @@ app.use('/users', userRoutes);
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  const message = `Server is running on port ${PORT}`;
+  console.log(message);
+  logger.info(message);
 });
