@@ -1,7 +1,9 @@
 const express = require('express');
-const { createBrief } = require('../services/brief.services');
+const { createBrief, getBriefById } = require('../services/brief.services');
 const { createBriefFromTemplate, getAllTemplates } = require('../services/template.services');
 const authenticateAdmin = require('../libraries/auth/adminAuth');
+const authenticateClient = require('../libraries/auth/clientAuth');
+const logger = require('../helper/logger.helper');
 
 const router = express.Router();
 
@@ -70,12 +72,49 @@ router.post('/from-template', authenticateAdmin, async (req, res) => {
   }
 });
 
+
+
+
 router.get('/templates', async (req, res) => {
   try {
     const templates = await getAllTemplates();
     res.status(200).json(templates);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /briefs/:id
+ * Get a brief by ID with all sections, fields, and field values
+ */
+router.get('/:id', authenticateClient, async (req, res) => {
+  try {
+    logger.access(`GET /briefs/${req.params.id} - User: ${req.user?.id}`);
+    
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Valid brief ID is required' });
+    }
+    
+    const brief = await getBriefById(id, req.user.id);
+    
+    logger.info(`Successfully retrieved brief: ${id}`);
+    
+    res.status(200).json({
+      message: 'Brief retrieved successfully',
+      data: brief
+    });
+    
+  } catch (error) {
+    logger.error(`GET /briefs/:id - Error: ${error.message}`);
+    
+    const statusCode = error.message.includes('not found') ? 404 : 500;
+    
+    res.status(statusCode).json({
+      error: error.message || 'Failed to retrieve brief'
+    });
   }
 });
 
