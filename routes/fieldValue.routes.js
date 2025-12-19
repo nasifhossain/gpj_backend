@@ -1,5 +1,5 @@
 const express = require('express');
-const { generateAIPromptForSection } = require('../services/fieldValue.services');
+const { generateAIPromptForSection, generateFieldValuesWithAI } = require('../services/fieldValue.services');
 const authenticateAdmin = require('../libraries/auth/adminAuth');
 const logger = require('../helper/logger.helper');
 const authenticateClient = require('../libraries/auth/clientAuth');
@@ -91,6 +91,60 @@ router.post('/section/ai', authenticateClient, async (req, res) => {
     
     res.status(statusCode).json({
       error: error.message || 'Failed to generate AI prompt',
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+  }
+});
+
+/**
+ * POST /fieldvalue/section/generate
+ * Generate field values using AI by analyzing documents
+ * 
+ * Request Body:
+ * {
+ *   "sectionId": "uuid-string",
+ *   "s3Keys": ["path/to/document1.pdf", "path/to/document2.xlsx"]
+ * }
+ */
+router.post('/section/generate', authenticateClient, async (req, res) => {
+  try {
+    logger.access(`POST /fieldvalue/section/generate - User: ${req.user?.id}`);
+    
+    const validationErrors = validateAIGenerationInput(req.body);
+    if (validationErrors.length > 0) {
+      logger.info(`Validation failed: ${JSON.stringify(validationErrors)}`);
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    const { sectionId, s3Keys } = req.body;
+    
+    const result = await generateFieldValuesWithAI(sectionId, s3Keys);
+    
+    logger.info(`Successfully generated field values for section: ${sectionId}`);
+    
+    res.status(200).json({
+      message: 'Field values generated successfully',
+      data: {
+        sectionName: result.sectionName,
+        briefTitle: result.briefTitle,
+        totalFields: result.totalFields,
+        totalDocuments: result.totalDocuments,
+        extractedData: result.extractedData,
+        fields: result.fields
+      }
+    });
+    
+  } catch (error) {
+    logger.error(`POST /fieldvalue/section/generate - Error: ${error.message}`);
+    logger.error(`Stack trace: ${error.stack}`);
+    
+    const statusCode = error.message.includes('not found') ? 404 : 500;
+    
+    res.status(statusCode).json({
+      error: error.message || 'Failed to generate field values',
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
   }

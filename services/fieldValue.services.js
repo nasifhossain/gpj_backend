@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma.client').prisma;
 const logger = require('../helper/logger.helper');
 const FileConverter = require('../helper/fileConverter.helper');
+const Gemini = require('../libraries/gemini/gemini.lib');
 
 /**
  * Generate AI prompt by combining all field prompts in a section
@@ -136,7 +137,13 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
   combinedPrompt += `\n`;
   
   combinedPrompt += `## Instructions\n`;
-  combinedPrompt += `Please analyze the provided document and extract the following information. For each field, follow the specific instructions provided. If the information is not found, respond with 'Nil' for that field.\n\n`;
+  combinedPrompt += `IMPORTANT: Please carefully and thoroughly analyze all provided documents (including PDFs, spreadsheets, and presentations). Take your time to review every section, page, and data point.\n\n`;
+  combinedPrompt += `For each field below:\n`;
+  combinedPrompt += `1. Extract ONLY the exact information as specified in the instruction\n`;
+  combinedPrompt += `2. If you find the information clearly and confidently, provide the exact value\n`;
+  combinedPrompt += `3. If you have ANY doubt, uncertainty, or cannot find clear evidence of the information, respond with 'Nil' for that field\n`;
+  combinedPrompt += `4. Do NOT guess or make assumptions - if unsure, use 'Nil'\n`;
+  combinedPrompt += `5. For PDFs, make sure to scan all pages and sections carefully\n\n`;
   
   combinedPrompt += `## Fields to Extract\n\n`;
   
@@ -194,6 +201,123 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
   };
 };
 
+/**
+ * Generate field values using AI by analyzing documents
+ * @param {string} sectionId - The section ID to fetch fields from
+ * @param {Array<string>} s3Keys - Array of S3 keys of uploaded documents
+ * @returns {Promise<{extractedData: Object, prompt: string, fields: Array}>} Extracted field values and metadata
+ */
+const generateFieldValuesWithAI = async (sectionId, s3Keys) => {
+  // Generate the prompt with document contents
+  const promptData = await generateAIPromptForSection(sectionId, s3Keys);
+  
+  if (!promptData.prompt) {
+    throw new Error('No fields with prompts found in this section');
+  }
+  
+  logger.info(`Initializing Gemini AI for section: ${sectionId}`);
+  
+  // Initialize Gemini
+  const gemini = new Gemini();
+  gemini.initialize('gemini-flash-latest');
+  
+  const fileConverter = new FileConverter();
+  const binaryFiles = [];
+  
+  // Fetch binary files (PDF, images) for Gemini
+  // Text content (XLSX, PPTX) is already embedded in the prompt
+  logger.info(`Processing ${s3Keys.length} document(s) for binary files...`);
+  
+  // Process all files in parallel using Promise.allSettled
+  const filePromises = s3Keys.map(s3Key => 
+    fileConverter.getFileFromS3ForGemini(s3Key)
+      .then(fileContent => ({ s3Key, fileContent, status: 'fulfilled' }))
+      .catch(error => ({ s3Key, error, status: 'rejected' }))
+  );
+  
+  const results = await Promise.allSettled(filePromises);
+  
+  // Process results
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled' && result.value.status === 'fulfilled') {
+      const { s3Key, fileContent } = result.value;
+      
+      // Only add binary files (PDF, images) - text is already in prompt
+      if (typeof fileContent !== 'string') {
+        binaryFiles.push(fileContent);
+        logger.info(`Added binary file for Gemini: ${s3Key}`);
+      } else {
+        logger.info(`Skipped text file (already in prompt): ${s3Key}`);
+      }
+    } else {
+      const s3Key = result.value?.s3Key || s3Keys[index];
+      const errorMsg = result.value?.error?.message || result.reason?.message || 'Unknown error';
+      logger.error(`Failed to fetch file for Gemini: ${s3Key} - ${errorMsg}`);
+    }
+  });
+  
+  logger.info(`Sending prompt to Gemini AI with ${binaryFiles.length} binary file(s)`);
+  
+  try {
+    // Get AI response - pass binary files only if they exist
+    const aiResponse = await gemini.getResponse(
+      promptData.prompt, 
+      binaryFiles.length > 0 ? binaryFiles : []
+    );
+    
+    logger.info('Received response from Gemini AI');
+    logger.info(`AI Response length: ${aiResponse.length} characters`);
+    
+    // Extract JSON from response
+    let extractedData = null;
+    
+    // Try to find JSON in the response
+    const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      try {
+        extractedData = JSON.parse(jsonMatch[1].trim());
+        logger.info('Successfully extracted JSON from AI response');
+      } catch (parseError) {
+        logger.error(`Failed to parse JSON from AI response: ${parseError.message}`);
+      }
+    }
+    
+    // If no JSON block found, try parsing the entire response
+    if (!extractedData) {
+      try {
+        extractedData = JSON.parse(aiResponse);
+        logger.info('Successfully parsed entire AI response as JSON');
+      } catch (parseError) {
+        logger.error(`Failed to parse entire response as JSON: ${parseError.message}`);
+        // Return raw response if JSON parsing fails
+        extractedData = { raw_response: aiResponse };
+      }
+    }
+    
+    // Log the extracted data
+    const extractedDataLog = `\n${'='.repeat(80)}\nEXTRACTED FIELD VALUES\n${'='.repeat(80)}\n${JSON.stringify(extractedData, null, 2)}\n${'='.repeat(80)}\n`;
+    console.log(extractedDataLog);
+    logger.info(extractedDataLog);
+    
+    return {
+      extractedData,
+      rawResponse: aiResponse,
+      prompt: promptData.prompt,
+      fields: promptData.fields,
+      sectionName: promptData.sectionName,
+      briefTitle: promptData.briefTitle,
+      totalFields: promptData.totalFields,
+      totalDocuments: promptData.totalDocuments
+    };
+    
+  } catch (error) {
+    logger.error(`Gemini AI error: ${error.message}`);
+    logger.error(`Stack trace: ${error.stack}`);
+    throw new Error(`Failed to generate field values with AI: ${error.message}`);
+  }
+};
+
 module.exports = {
-  generateAIPromptForSection
+  generateAIPromptForSection,
+  generateFieldValuesWithAI
 };
