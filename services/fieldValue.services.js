@@ -63,14 +63,24 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
   // Fetch and process documents from S3
   logger.info(`Fetching ${s3Keys.length} documents from S3...`);
   const fileConverter = new FileConverter();
-  const documentContents = [];
   
-  for (let i = 0; i < s3Keys.length; i++) {
-    try {
-      const s3Key = s3Keys[i];
-      logger.info(`Processing document ${i + 1}/${s3Keys.length}: ${s3Key}`);
-      
-      const fileContent = await fileConverter.getFileFromS3ForGemini(s3Key);
+  // Process all files in parallel using Promise.allSettled
+  const documentPromises = s3Keys.map((s3Key, index) => 
+    fileConverter.getFileFromS3ForGemini(s3Key)
+      .then(fileContent => {
+        logger.info(`Processing document ${index + 1}/${s3Keys.length}: ${s3Key}`);
+        return { s3Key, fileContent, status: 'fulfilled' };
+      })
+      .catch(error => ({ s3Key, error, status: 'rejected' }))
+  );
+  
+  const results = await Promise.allSettled(documentPromises);
+  
+  // Process results and build documentContents array
+  const documentContents = [];
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled' && result.value.status === 'fulfilled') {
+      const { s3Key, fileContent } = result.value;
       
       // Check if it's extracted text or binary file
       if (typeof fileContent === 'string') {
@@ -80,6 +90,7 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
           type: 'text',
           content: fileContent
         });
+        logger.info(`Successfully processed text file: ${s3Key}`);
       } else {
         // Binary file (PDF, images)
         documentContents.push({
@@ -88,18 +99,19 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
           mimeType: fileContent.inlineData.mimeType,
           content: `[Binary file: ${s3Key}]`
         });
+        logger.info(`Successfully processed binary file: ${s3Key}`);
       }
-      
-      logger.info(`Successfully processed: ${s3Key}`);
-    } catch (error) {
-      logger.error(`Failed to fetch document ${s3Keys[i]}: ${error.message}`);
+    } else {
+      const s3Key = result.value?.s3Key || s3Keys[index];
+      const errorMsg = result.value?.error?.message || result.reason?.message || 'Unknown error';
+      logger.error(`Failed to fetch document ${s3Key}: ${errorMsg}`);
       documentContents.push({
-        name: s3Keys[i],
+        name: s3Key,
         type: 'error',
-        content: `[Error: Could not fetch this document - ${error.message}]`
+        content: `[Error: Could not fetch this document - ${errorMsg}]`
       });
     }
-  }
+  });
   
   logger.info(`Successfully processed ${documentContents.length} documents`);
   
@@ -143,7 +155,7 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
   combinedPrompt += `2. If you find the information clearly and confidently, provide the exact value\n`;
   combinedPrompt += `3. If you have ANY doubt, uncertainty, or cannot find clear evidence of the information, respond with 'Nil' for that field\n`;
   combinedPrompt += `4. Do NOT guess or make assumptions - if unsure, use 'Nil'\n`;
-  combinedPrompt += `5. For PDFs, make sure to scan all pages and sections carefully\n\n`;
+  combinedPrompt += `5. For PDFs, make sure to scan all pages and sections carefully, Pdf may have non text elements so be careful\n\n`;
   
   combinedPrompt += `## Fields to Extract\n\n`;
   
