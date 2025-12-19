@@ -62,9 +62,18 @@ class FileConverter {
                 textContent += `Sheet ${index + 1}: ${sheetName}\n`;
                 textContent += `${'='.repeat(50)}\n\n`;
                 
-                // Convert sheet to CSV format for better readability
+                // Convert sheet to CSV format
                 const csv = XLSX.utils.sheet_to_csv(sheet);
-                textContent += csv + '\n';
+                
+                // Filter out rows that are only commas (empty rows)
+                const lines = csv.split('\n');
+                const filteredLines = lines.filter(line => {
+                    // Remove a line if it's only commas and whitespace
+                    const cleaned = line.replace(/,/g, '').trim();
+                    return cleaned.length > 0;
+                });
+                
+                textContent += filteredLines.join('\n') + '\n';
             });
             
             return textContent;
