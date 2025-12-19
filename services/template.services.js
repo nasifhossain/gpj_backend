@@ -107,6 +107,41 @@ const createBriefFromTemplate = async (templateData, userId, title) => {
   });
 };
 
+const getAllTemplates = async () => {
+  const briefs = await prisma.brief.findMany({
+    include: {
+      sections: {
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          fields: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+  
+  return briefs.map(brief => ({
+    title: brief.title,
+    templateName: brief.templateName,
+    sections: brief.sections.map(section => ({
+      sectionName: section.sectionName,
+      inputFields: [{
+        fieldsHeading: section.sectionName,
+        fields: section.fields.map(field => ({
+          inputName: field.label,
+          dataType: field.dataType,
+          fieldType: field.fieldType,
+          options: field.options?.dropdownOptions || undefined,
+          helperText: field.options?.helperText || undefined,
+          inputValue: field.options?.defaultValue || undefined,
+          prompt: field.prompt || undefined
+        }))
+      }]
+    }))
+  }));
+};
+
 module.exports = {
-  createBriefFromTemplate
+  createBriefFromTemplate,
+  getAllTemplates
 };

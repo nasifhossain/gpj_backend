@@ -25,7 +25,7 @@ services:
     build: .
     container_name: gpj_backend
     ports:
-      - "3000:3000"
+      - "8000:8000"
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/gpj_db

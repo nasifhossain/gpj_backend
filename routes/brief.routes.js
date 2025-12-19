@@ -1,6 +1,6 @@
 const express = require('express');
 const { createBrief } = require('../services/brief.services');
-const { createBriefFromTemplate } = require('../services/template.services');
+const { createBriefFromTemplate, getAllTemplates } = require('../services/template.services');
 const authenticateAdmin = require('../libraries/auth/adminAuth');
 
 const router = express.Router();
@@ -67,6 +67,15 @@ router.post('/from-template', authenticateAdmin, async (req, res) => {
     res.status(201).json(brief);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+router.get('/templates', async (req, res) => {
+  try {
+    const templates = await getAllTemplates();
+    res.status(200).json(templates);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

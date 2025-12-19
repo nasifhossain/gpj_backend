@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Expose the port
-EXPOSE 3000
+EXPOSE 8000
 
 # Set default environment to production
 ENV NODE_ENV=production

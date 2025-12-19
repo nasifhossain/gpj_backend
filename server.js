@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const userRoutes = require('./routes/user.routes');
 const briefRoutes = require('./routes/brief.routes');
 const sectionRoutes = require('./routes/section.routes');
@@ -6,7 +7,8 @@ const fieldRoutes = require('./routes/field.routes');
 const logger = require('./helper/logger.helper');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
+app.use(cors());
 app.use(express.json());
 
 // Sample route
