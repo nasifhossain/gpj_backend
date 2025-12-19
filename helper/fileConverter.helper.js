@@ -98,42 +98,134 @@ class FileConverter {
                 .filter(name => name.match(/ppt\/slides\/slide\d+\.xml/))
                 .sort();
 
-            // Helper function to extract text from XML nodes
-            const extractTextFromNode = (node) => {
-                if (!node) return '';
+            // Helper function to check if text is meaningful (not metadata)
+            const isMeaningfulText = (text) => {
+                if (!text || typeof text !== 'string') return false;
                 
-                let text = '';
+                const trimmed = text.trim();
+                
+                // Filter out empty or very short text (but allow 2-3 char abbreviations like "AI", "IBM")
+                if (trimmed.length < 2) return false;
+                
+                // Filter out URN schemas
+                if (trimmed.startsWith('urn:') || trimmed.includes('urn:schemas')) return false;
+                
+                // Filter out XML namespaces and schema URLs
+                if (trimmed.includes('schemas.openxmlformats.org') || 
+                    trimmed.includes('schemas.microsoft.com') ||
+                    trimmed.startsWith('http://') ||
+                    trimmed.startsWith('https://') && trimmed.length > 100) return false;
+                
+                // Filter out GUIDs and technical IDs
+                if (/^[\{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[\}]?$/.test(trimmed)) return false;
+                
+                // Filter out hex color codes (6 or 8 digit hex)
+                if (/^[0-9A-Fa-f]{6,8}$/.test(trimmed)) return false;
+                
+                // Filter out locale codes (e.g., en-US, zh-TW, en-IN)
+                if (/^[a-z]{2}-[A-Z]{2}$/.test(trimmed)) return false;
+                
+                // Filter out rId references (e.g., rId2, rId3)
+                if (/^rId\d+$/.test(trimmed)) return false;
+                
+                // Filter out shape references (e.g., "Shape 136", "Google Shape;176;p1")
+                if (/^(Google\s+)?Shape[;\s]+\d+/.test(trimmed)) return false;
+                if (/^Shape\s+\d+$/.test(trimmed)) return false;
+                
+                // Filter out PowerPoint shape/object names
+                const shapeNames = ['TextBox', 'Rectangle', 'Picture', 'Oval', 'Group'];
+                if (shapeNames.some(shape => trimmed.startsWith(shape) && /\d+$/.test(trimmed))) return false;
+                
+                // Filter out font names
+                const fontNames = ['IBM Plex Sans', 'Wingdings', 'Arial', 'Calibri', 'Times New Roman', 'System Font'];
+                if (fontNames.some(font => trimmed.includes(font))) return false;
+                
+                // Filter out pure numbers (positive or negative, especially large ones)
+                if (/^-?\d+$/.test(trimmed)) return false;
+                
+                // Filter out decimal numbers with no context
+                if (/^-?\d+\.\d+$/.test(trimmed)) return false;
+                
+                // Filter out Chinese connector/arrow names (直线箭头连接符)
+                if (/^[\u4e00-\u9fa5]+连接符\s*\d*$/.test(trimmed)) return false;
+                if (/^[\u4e00-\u9fa5]+箭头[\u4e00-\u9fa5]*\s*\d*$/.test(trimmed)) return false;
+                
+                // Filter out common single-word PowerPoint metadata
+                const metadataWords = [
+                    'noStrike', 'title', 'pic', 'auto', 'none', 'base', 'ctr', 'just',
+                    'algn', 'anchor', 'anchorCtr', 'dist', 'wrap', 'wrapNone', 'wrapSquare',
+                    'wrapThrough', 'wrapTight', 'wrapTopAndBottom'
+                ];
+                if (metadataWords.includes(trimmed)) return false;
+                
+                // Filter out common XML tags and technical terms
+                const technicalTerms = [
+                    'rect', 'square', 'auto', 'none', 'nonenoStrike', 'textNoShape',
+                    'horzsquare', 'accent', 'minordk', 'base', 'mainhttp', 'horz', 'vert',
+                    'lt', 'dk', 'med', 'Light', 'Regular', 'Bold', 'Italic',
+                    '+mn-lt', '+mn-ea', '+mn-cs', 'bg1', 'tx1', 'accent1', 'accent2', 
+                    'accent3', 'accent4', 'accent5', 'accent6'
+                ];
+                if (technicalTerms.includes(trimmed)) return false;
+                
+                // Filter out design/formatting values (combinations of letters and many zeros)
+                if (/^[a-zA-Z]*0{4,}[a-zA-Z]*$/.test(trimmed)) return false;
+                
+                // Filter out text that's mostly numbers and special characters (less than 40% letters)
+                const alphaCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+                const totalLength = trimmed.length;
+                
+                // If it's short (< 10 chars), require at least 50% letters
+                if (totalLength < 10 && alphaCount < totalLength * 0.5) return false;
+                
+                // If it's longer, require at least 40% letters
+                if (totalLength >= 10 && alphaCount < totalLength * 0.4) return false;
+                
+                // Filter out single characters or special character only strings
+                if (trimmed.length === 1 && !/[a-zA-Z0-9]/.test(trimmed)) return false;
+                
+                // Keep text that has meaningful length and content
+                return true;
+            };
+
+            // Helper function to extract text from XML nodes
+            const extractTextFromNode = (node, collectedTexts = new Set()) => {
+                if (!node) return collectedTexts;
                 
                 if (typeof node === 'string') {
-                    return node;
+                    if (isMeaningfulText(node)) {
+                        collectedTexts.add(node.trim());
+                    }
+                    return collectedTexts;
                 }
                 
                 if (Array.isArray(node)) {
                     node.forEach(item => {
-                        text += extractTextFromNode(item);
+                        extractTextFromNode(item, collectedTexts);
                     });
-                    return text;
+                    return collectedTexts;
                 }
                 
                 if (typeof node === 'object') {
                     // Look for text in 'a:t' elements (text runs)
                     if (node['a:t']) {
-                        if (Array.isArray(node['a:t'])) {
-                            text += node['a:t'].join(' ') + ' ';
-                        } else {
-                            text += node['a:t'] + ' ';
-                        }
+                        const texts = Array.isArray(node['a:t']) ? node['a:t'] : [node['a:t']];
+                        texts.forEach(t => {
+                            if (isMeaningfulText(t)) {
+                                collectedTexts.add(t.trim());
+                            }
+                        });
                     }
                     
                     // Recursively process all properties
                     Object.keys(node).forEach(key => {
                         if (key !== 'a:t') {
-                            text += extractTextFromNode(node[key]);
+                            extractTextFromNode(node[key], collectedTexts);
                         }
                     });
                 }
                 
-                return text;
+                return collectedTexts;
             };
 
             // Process all slides in parallel using Promise.allSettled
@@ -141,18 +233,23 @@ class FileConverter {
                 try {
                     const slideXml = await zip.files[slideFile].async('text');
                     const result = await parser.parseStringPromise(slideXml);
-                    const slideText = extractTextFromNode(result);
+                    const textSet = extractTextFromNode(result, new Set());
+                    
+                    // Convert Set to array and join with proper spacing
+                    const slideTexts = Array.from(textSet);
                     
                     return {
                         slideNumber: i + 1,
-                        text: slideText.trim()
+                        text: slideTexts.join('\n'),
+                        hasContent: slideTexts.length > 0
                     };
                 } catch (error) {
                     console.error(`Failed to parse slide ${i + 1}:`, error.message);
                     return {
                         slideNumber: i + 1,
                         text: '[Unable to extract text from this slide]',
-                        error: true
+                        error: true,
+                        hasContent: false
                     };
                 }
             });
@@ -161,16 +258,24 @@ class FileConverter {
 
             // Build text content from results in order
             slideResults.forEach((result, i) => {
-                textContent += `\n${'='.repeat(50)}\n`;
-                textContent += `Slide ${i + 1}\n`;
-                textContent += `${'='.repeat(50)}\n\n`;
-
-                if (result.status === 'fulfilled') {
+                if (result.status === 'fulfilled' && result.value.hasContent) {
+                    textContent += `\n${'='.repeat(50)}\n`;
+                    textContent += `Slide ${result.value.slideNumber}\n`;
+                    textContent += `${'='.repeat(50)}\n\n`;
                     textContent += result.value.text + '\n\n';
-                } else {
+                } else if (result.status === 'fulfilled' && result.value.error) {
+                    textContent += `\n${'='.repeat(50)}\n`;
+                    textContent += `Slide ${result.value.slideNumber}\n`;
+                    textContent += `${'='.repeat(50)}\n\n`;
+                    textContent += result.value.text + '\n\n';
+                } else if (result.status === 'rejected') {
                     console.error(`Slide ${i + 1} promise rejected:`, result.reason);
+                    textContent += `\n${'='.repeat(50)}\n`;
+                    textContent += `Slide ${i + 1}\n`;
+                    textContent += `${'='.repeat(50)}\n\n`;
                     textContent += '[Unable to extract text from this slide]\n\n';
                 }
+                // Skip slides with no meaningful content
             });
             
             return textContent || '[No text content found in presentation]';

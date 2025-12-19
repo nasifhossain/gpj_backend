@@ -82,9 +82,19 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
     if (result.status === 'fulfilled' && result.value.status === 'fulfilled') {
       const { s3Key, fileContent } = result.value;
       
-      // Check if it's extracted text or binary file
-      if (typeof fileContent === 'string') {
-        // Text extraction (XLSX, PPTX)
+      // Check if it's PPTX with images
+      if (fileContent && typeof fileContent === 'object' && fileContent.type === 'pptx') {
+        // PPTX with text and images
+        documentContents.push({
+          name: s3Key,
+          type: 'pptx',
+          content: fileContent.text,
+          images: fileContent.images,
+          imageCount: fileContent.imageCount
+        });
+        logger.info(`Successfully processed PPTX file: ${s3Key} with ${fileContent.imageCount} images`);
+      } else if (typeof fileContent === 'string') {
+        // Text extraction (XLSX)
         documentContents.push({
           name: s3Key,
           type: 'text',
@@ -138,6 +148,13 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
     combinedPrompt += `### Document ${index + 1}: ${doc.name}\n`;
     if (doc.type === 'text') {
       combinedPrompt += `\n${doc.content}\n\n`;
+    } else if (doc.type === 'pptx') {
+      combinedPrompt += `Type: PowerPoint Presentation\n`;
+      combinedPrompt += `Extracted Text:\n${doc.content}\n`;
+      if (doc.imageCount > 0) {
+        combinedPrompt += `\nNote: This presentation contains ${doc.imageCount} image(s) that will be analyzed separately.\n`;
+      }
+      combinedPrompt += `\n`;
     } else if (doc.type === 'binary') {
       combinedPrompt += `Type: ${doc.mimeType}\n`;
       combinedPrompt += `Note: This is a binary file (PDF/Image). The AI model will analyze it directly.\n\n`;
@@ -254,12 +271,22 @@ const generateFieldValuesWithAI = async (sectionId, s3Keys) => {
     if (result.status === 'fulfilled' && result.value.status === 'fulfilled') {
       const { s3Key, fileContent } = result.value;
       
-      // Only add binary files (PDF, images) - text is already in prompt
-      if (typeof fileContent !== 'string') {
+      // Check if it's PPTX with images
+      if (fileContent && typeof fileContent === 'object' && fileContent.type === 'pptx') {
+        // Add PPTX images to Gemini files array
+        if (fileContent.images && fileContent.images.length > 0) {
+          binaryFiles.push(...fileContent.images);
+          logger.info(`Added ${fileContent.images.length} images from PPTX: ${s3Key}`);
+        } else {
+          logger.info(`PPTX has no images (text already in prompt): ${s3Key}`);
+        }
+      } else if (typeof fileContent === 'string') {
+        // Text file - already in prompt
+        logger.info(`Skipped text file (already in prompt): ${s3Key}`);
+      } else if (fileContent && fileContent.inlineData) {
+        // Binary file (PDF, standalone images)
         binaryFiles.push(fileContent);
         logger.info(`Added binary file for Gemini: ${s3Key}`);
-      } else {
-        logger.info(`Skipped text file (already in prompt): ${s3Key}`);
       }
     } else {
       const s3Key = result.value?.s3Key || s3Keys[index];
