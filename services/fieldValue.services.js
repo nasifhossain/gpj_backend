@@ -4,6 +4,115 @@ const FileConverter = require('../helper/fileConverter.helper');
 const Gemini = require('../libraries/gemini/gemini.lib');
 
 /**
+ * Save extracted field values to database
+ * @param {string} sectionId - The section ID
+ * @param {string} briefId - The brief ID (not used in current schema, kept for future)
+ * @param {Object} extractedData - The extracted field values {fieldKey: value}
+ * @param {string} modelUsed - The AI model used
+ * @param {string} userId - The user ID performing the action
+ * @returns {Promise<{saved: number, skipped: number, errors: Array}>} Save results
+ */
+const saveFieldValues = async (sectionId, briefId, extractedData, modelUsed = 'gemini-flash-latest', userId) => {
+  logger.info(`Saving field values for section: ${sectionId}, brief: ${briefId}`);
+  
+  const results = {
+    saved: 0,
+    skipped: 0,
+    updated: 0,
+    errors: []
+  };
+  
+  // Get all fields in this section with their IDs
+  const fields = await prisma.field.findMany({
+    where: { sectionId },
+    select: {
+      id: true,
+      fieldKey: true
+    }
+  });
+  
+  logger.info(`Found ${fields.length} fields in section`);
+  
+  // Create a map of fieldKey -> fieldId
+  const fieldMap = {};
+  fields.forEach(field => {
+    fieldMap[field.fieldKey] = field.id;
+  });
+  
+  // Process each extracted field value
+  for (const [fieldKey, value] of Object.entries(extractedData)) {
+    try {
+      const fieldId = fieldMap[fieldKey];
+      
+      if (!fieldId) {
+        logger.error(`Field not found for key: ${fieldKey} in section: ${sectionId}`);
+        results.errors.push({ fieldKey, error: 'Field not found' });
+        continue;
+      }
+      
+      // Check if field value already exists (only by fieldId since briefId is not in FieldValue model)
+      const existingValue = await prisma.fieldValue.findFirst({
+        where: {
+          fieldId
+        }
+      });
+      
+      // Skip if source is MANUAL (user input should not be overwritten)
+      if (existingValue && existingValue.source === 'MANUAL') {
+        logger.info(`Skipping field ${fieldKey}: source is MANUAL`);
+        results.skipped++;
+        continue;
+      }
+      
+      // Determine confidence based on value
+      let confidence = 0.85;
+      if (value === 'Nil' || value === null || value === '') {
+        confidence = 0.3;
+      }
+      
+      // Create or update the field value
+      if (existingValue) {
+        await prisma.fieldValue.update({
+          where: {
+            id: existingValue.id
+          },
+          data: {
+            value: value === null ? '' : String(value),
+            source: 'AI',
+            confidence,
+            modelUsed,
+            updatedById: userId
+          }
+        });
+        logger.info(`Updated field value for ${fieldKey}`);
+        results.updated++;
+      } else {
+        await prisma.fieldValue.create({
+          data: {
+            fieldId,
+            value: value === null ? '' : String(value),
+            source: 'AI',
+            confidence,
+            modelUsed,
+            updatedById: userId
+          }
+        });
+        logger.info(`Created field value for ${fieldKey}`);
+        results.saved++;
+      }
+      
+    } catch (error) {
+      logger.error(`Error saving field value for ${fieldKey}: ${error.message}`);
+      results.errors.push({ fieldKey, error: error.message });
+    }
+  }
+  
+  logger.info(`Field values saved: ${results.saved}, updated: ${results.updated}, skipped: ${results.skipped}, errors: ${results.errors.length}`);
+  
+  return results;
+};
+
+/**
  * Generate AI prompt by combining all field prompts in a section
  * @param {string} sectionId - The section ID to fetch fields from
  * @param {Array<string>} s3Keys - Array of S3 keys of uploaded documents
@@ -223,7 +332,9 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
       prompt: field.prompt
     })),
     sectionName: section.sectionName,
+    sectionId: section.id,
     briefTitle: section.brief.title,
+    briefId: section.brief.id,
     s3Keys: s3Keys,
     totalDocuments: documentContents.length,
     totalFields: fieldsWithPrompts.length
@@ -234,9 +345,10 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
  * Generate field values using AI by analyzing documents
  * @param {string} sectionId - The section ID to fetch fields from
  * @param {Array<string>} s3Keys - Array of S3 keys of uploaded documents
+ * @param {string} userId - The user ID performing the action
  * @returns {Promise<{extractedData: Object, prompt: string, fields: Array}>} Extracted field values and metadata
  */
-const generateFieldValuesWithAI = async (sectionId, s3Keys) => {
+const generateFieldValuesWithAI = async (sectionId, s3Keys, userId) => {
   // Generate the prompt with document contents
   const promptData = await generateAIPromptForSection(sectionId, s3Keys);
   
@@ -338,13 +450,37 @@ const generateFieldValuesWithAI = async (sectionId, s3Keys) => {
     console.log(extractedDataLog);
     logger.info(extractedDataLog);
     
+    // Save field values to database if extraction was successful
+    let saveResults = null;
+    if (extractedData && !extractedData.raw_response && userId) {
+      try {
+        logger.info('Saving extracted field values to database...');
+        saveResults = await saveFieldValues(
+          promptData.sectionId,
+          promptData.briefId,
+          extractedData,
+          'gemini-flash-latest',
+          userId
+        );
+        logger.info(`Save completed: ${saveResults.saved} created, ${saveResults.updated} updated, ${saveResults.skipped} skipped`);
+      } catch (saveError) {
+        logger.error(`Failed to save field values: ${saveError.message}`);
+        // Don't throw - return the extracted data even if save fails
+      }
+    } else if (!userId) {
+      logger.warn('userId not provided, skipping field value save');
+    }
+    
     return {
       extractedData,
+      saveResults,
       rawResponse: aiResponse,
       prompt: promptData.prompt,
       fields: promptData.fields,
       sectionName: promptData.sectionName,
       briefTitle: promptData.briefTitle,
+      briefId: promptData.briefId,
+      sectionId: promptData.sectionId,
       totalFields: promptData.totalFields,
       totalDocuments: promptData.totalDocuments
     };
@@ -358,5 +494,6 @@ const generateFieldValuesWithAI = async (sectionId, s3Keys) => {
 
 module.exports = {
   generateAIPromptForSection,
-  generateFieldValuesWithAI
+  generateFieldValuesWithAI,
+  saveFieldValues
 };

@@ -121,18 +121,19 @@ router.post('/section/generate', authenticateClient, async (req, res) => {
     
     const { sectionId, s3Keys } = req.body;
     
-    const result = await generateFieldValuesWithAI(sectionId, s3Keys);
+    const result = await generateFieldValuesWithAI(sectionId, s3Keys, req.user.id);
     
     logger.info(`Successfully generated field values for section: ${sectionId}`);
     
     res.status(200).json({
-      message: 'Field values generated successfully',
+      message: 'Field values generated and saved successfully',
       data: {
         sectionName: result.sectionName,
         briefTitle: result.briefTitle,
         totalFields: result.totalFields,
         totalDocuments: result.totalDocuments,
         extractedData: result.extractedData,
+        saveResults: result.saveResults,
         fields: result.fields
       }
     });
