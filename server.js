@@ -13,6 +13,11 @@ const PORT = process.env.PORT || 8000;
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint (no DB queries for fast response)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Sample route
 app.get('/', async (req, res) => {
   const prisma = require('./config/prisma.client').prisma;

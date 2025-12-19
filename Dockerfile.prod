@@ -1,0 +1,85 @@
+# ============================================
+# Stage 1: Dependencies
+# ============================================
+FROM node:20-alpine AS dependencies
+
+# Install build dependencies for native modules (bcrypt, etc.)
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production
+
+# ============================================
+# Stage 2: Build
+# ============================================
+FROM node:20-alpine AS build
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies for Prisma)
+RUN npm install
+
+# Copy application source
+COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# ============================================
+# Stage 3: Production
+# ============================================
+FROM node:20-alpine AS production
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy production dependencies from dependencies stage
+COPY --from=dependencies --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Copy Prisma schema and migration files
+COPY --chown=nodejs:nodejs prisma ./prisma
+
+# Copy generated Prisma Client from build stage (custom location)
+COPY --from=build --chown=nodejs:nodejs /app/generated ./generated
+
+# Copy application source
+COPY --chown=nodejs:nodejs . .
+
+# Remove development files
+RUN rm -rf tests/ *.md .git/ .github/
+
+# Switch to non-root user
+USER nodejs
+
+# Expose the application port
+EXPOSE 8000
+
+# Set production environment
+ENV NODE_ENV=production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:8000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Run migrations and start the application
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
