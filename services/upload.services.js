@@ -8,10 +8,18 @@ const generateUploadUrl = async ({ key, expiresIn, contentType }) => {
   }
 
   const sanitizedKey = key.trim();
+  
+  // Generate IST timestamp (UTC+5:30)
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+  const istTime = new Date(now.getTime() + istOffset);
+  const timestamp = istTime.toISOString().replace(/[:.]/g, '-').replace('T', '_').split('Z')[0];
+  
+  const keyWithTimestamp = `${timestamp}_${sanitizedKey}`;
   const expiration = expiresIn || 3600;
   
   const signedUrl = await s3Instance.generateUploadSignedUrl(
-    sanitizedKey, 
+    keyWithTimestamp, 
     expiration, 
     contentType
   );
