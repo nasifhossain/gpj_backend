@@ -117,6 +117,7 @@ model Field {
 
   fieldKey    String   // stable identifier (e.g. "project_name")
   label       String   // display name
+  fieldHeading String     @default("Basic Details") // UI grouping label (e.g. "Basic Details", "Client Information")
   dataType    String   // string, date, array, object
   fieldType   String   // input, dropdown, textarea
   options     Json?

@@ -60,12 +60,12 @@ const createBriefFromTemplate = async (templateData, userId, title) => {
               if (field.options) options.dropdownOptions = field.options;
               if (field.helperText) options.helperText = field.helperText;
               if (field.inputValue !== undefined) options.defaultValue = field.inputValue;
-              if (inputFieldGroup.fieldsHeading) options.groupHeading = inputFieldGroup.fieldsHeading;
               
               fieldsToCreate.push({
                 sectionId: section.id,
                 fieldKey,
                 label: field.inputName || inputFieldGroup.fieldsHeading || 'Untitled Field',
+                fieldHeading: inputFieldGroup.fieldsHeading || 'Basic Details',
                 dataType: field.dataType || 'String',
                 fieldType: field.fieldType || 'input',
                 options: Object.keys(options).length > 0 ? options : null,
@@ -123,21 +123,33 @@ const getAllTemplates = async () => {
   return briefs.map(brief => ({
     title: brief.title,
     templateName: brief.templateName,
-    sections: brief.sections.map(section => ({
-      sectionName: section.sectionName,
-      inputFields: [{
-        fieldsHeading: section.sectionName,
-        fields: section.fields.map(field => ({
-          inputName: field.label,
-          dataType: field.dataType,
-          fieldType: field.fieldType,
-          options: field.options?.dropdownOptions || undefined,
-          helperText: field.options?.helperText || undefined,
-          inputValue: field.options?.defaultValue || undefined,
-          prompt: field.prompt || undefined
+    sections: brief.sections.map(section => {
+      // Group fields by fieldHeading
+      const fieldsByHeading = section.fields.reduce((acc, field) => {
+        const heading = field.fieldHeading || 'Basic Details';
+        if (!acc[heading]) {
+          acc[heading] = [];
+        }
+        acc[heading].push(field);
+        return acc;
+      }, {});
+      
+      return {
+        sectionName: section.sectionName,
+        inputFields: Object.entries(fieldsByHeading).map(([heading, fields]) => ({
+          fieldsHeading: heading,
+          fields: fields.map(field => ({
+            inputName: field.label,
+            dataType: field.dataType,
+            fieldType: field.fieldType,
+            options: field.options?.dropdownOptions || undefined,
+            helperText: field.options?.helperText || undefined,
+            inputValue: field.options?.defaultValue || undefined,
+            prompt: field.prompt || undefined
+          }))
         }))
-      }]
-    }))
+      };
+    })
   }));
 };
 
