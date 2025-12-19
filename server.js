@@ -4,6 +4,7 @@ const userRoutes = require('./routes/user.routes');
 const briefRoutes = require('./routes/brief.routes');
 const sectionRoutes = require('./routes/section.routes');
 const fieldRoutes = require('./routes/field.routes');
+const uploadRoutes = require('./routes/upload.routes');
 const logger = require('./helper/logger.helper');
 
 const app = express();
@@ -24,6 +25,7 @@ app.use('/users', userRoutes);
 app.use('/briefs', briefRoutes);
 app.use('/sections', sectionRoutes);
 app.use('/fields', fieldRoutes);
+app.use('/upload', uploadRoutes);
 
 // Start the server
 app.listen(PORT, () => {
