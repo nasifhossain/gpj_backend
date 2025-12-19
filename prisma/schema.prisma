@@ -125,6 +125,8 @@ model Field {
 
   section     Section @relation(fields: [sectionId], references: [id])
   values      FieldValue[]
+
+  @@unique([sectionId, fieldKey])
 }
 
 //////////////////////////////////////////////////////
