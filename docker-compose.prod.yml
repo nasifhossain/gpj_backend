@@ -66,10 +66,9 @@ services:
     environment:
       - NGINX_HOST=${NGINX_HOST:-localhost}
       - NGINX_PORT=80
-    configs:
-      - source: nginx_config
-        target: /etc/nginx/conf.d/default.conf
     volumes:
+      # Nginx main configuration file
+      - ./nginx/default.conf:/etc/nginx/nginx.conf:ro
       # SSL certificates directory
       - ./nginx/ssl:/etc/nginx/ssl:ro
       # Certbot webroot for ACME challenge
@@ -80,10 +79,6 @@ services:
       backend:
         condition: service_healthy
     restart: always
-
-configs:
-  nginx_config:
-    file: ./nginx/default.conf
 
 networks:
   gpj_network_prod:
