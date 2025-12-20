@@ -2,6 +2,7 @@ const express = require('express');
 const { generateUploadUrl, saveDocument } = require('../services/upload.services');
 const authenticateClient = require('../libraries/auth/clientAuth');
 const logger = require('../helper/logger.helper');
+const { prisma } = require('../config/prisma.client');
 
 const router = express.Router();
 
@@ -70,4 +71,37 @@ router.post('/confirm', authenticateClient, async (req, res) => {
   }
 });
 
+router.delete('/delete', authenticateClient, async (req, res) => {
+  try {
+    logger.access(`DELETE /upload/delete - User: ${req.user?.userId}`);
+    
+    const { documentId } = req.body;
+    
+    if (!documentId) {
+      return res.status(400).json({ error: 'Document ID is required' });
+    }
+    
+    const document = await prisma.document.delete({
+      where: { id: documentId, uploadedById: req.user.id }
+    });
+    
+    logger.info(`Document deleted successfully: ${document.id}`);
+    
+    res.status(200).json({
+      message: 'Document deleted successfully',
+      data: document
+    });
+    
+  } catch (error) {
+    logger.error(`DELETE /upload/delete - Error: ${error.message}`);
+    logger.error(`Stack trace: ${error.stack}`);
+    
+    const statusCode = error.message.includes('not found') ? 404 : 500;
+    
+    res.status(statusCode).json({
+      error: error.message || 'Failed to delete document',
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+  }
+});
 module.exports = router;
