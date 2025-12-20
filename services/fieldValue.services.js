@@ -494,8 +494,133 @@ const generateFieldValuesWithAI = async (sectionId, s3Keys, userId) => {
   }
 };
 
+/**
+ * Save manually entered field values to database
+ * @param {string} sectionId - The section ID
+ * @param {Object} fieldValues - Object with fieldKey as key and value as value {fieldKey: value}
+ * @param {string} userId - The user ID performing the action
+ * @returns {Promise<{saved: number, updated: number, skipped: number, errors: Array}>} Save results
+ */
+const saveManualFieldValues = async (sectionId, fieldValues, userId) => {
+  logger.info(`Saving manual field values for section: ${sectionId}`);
+  
+  const results = {
+    saved: 0,
+    updated: 0,
+    skipped: 0,
+    errors: []
+  };
+  
+  // Validate inputs
+  if (!sectionId || typeof sectionId !== 'string') {
+    throw new Error('Section ID is required and must be a string');
+  }
+  
+  if (!fieldValues || typeof fieldValues !== 'object' || Object.keys(fieldValues).length === 0) {
+    throw new Error('Field values must be a non-empty object');
+  }
+  
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('User ID is required and must be a string');
+  }
+  
+  // Get all fields in this section with their IDs
+  const fields = await prisma.field.findMany({
+    where: { sectionId },
+    select: {
+      id: true,
+      fieldKey: true
+    }
+  });
+  
+  logger.info(`Found ${fields.length} fields in section`);
+  
+  // Create a map of fieldKey -> fieldId
+  const fieldMap = {};
+  fields.forEach(field => {
+    fieldMap[field.fieldKey] = field.id;
+  });
+  
+  // Process each field value
+  for (const [fieldKey, value] of Object.entries(fieldValues)) {
+    try {
+      const fieldId = fieldMap[fieldKey];
+      
+      if (!fieldId) {
+        logger.error(`Field not found for key: ${fieldKey} in section: ${sectionId}`);
+        results.errors.push({ fieldKey, error: 'Field not found' });
+        continue;
+      }
+      
+      // Check if field value already exists
+      const existingValue = await prisma.fieldValue.findFirst({
+        where: {
+          fieldId
+        }
+      });
+      
+      // Convert value to string for comparison and storage
+      const newValue = value === null || value === undefined ? '' : String(value);
+      
+      // Create or update the field value
+      if (existingValue) {
+        // Check if the value has actually changed
+        const existingValueStr = existingValue.value === null || existingValue.value === undefined 
+          ? '' 
+          : String(existingValue.value);
+        
+        if (existingValueStr === newValue) {
+          // Value hasn't changed, skip update
+          logger.info(`Skipping field ${fieldKey}: value unchanged`);
+          results.skipped++;
+          continue;
+        }
+        
+        // Value has changed, update it and set source to MANUAL
+        await prisma.fieldValue.update({
+          where: {
+            id: existingValue.id
+          },
+          data: {
+            value: newValue,
+            source: 'MANUAL',
+            confidence: null, // Manual entries don't have confidence scores
+            modelUsed: null,  // Manual entries don't use AI models
+            updatedById: userId
+          }
+        });
+        logger.info(`Updated field value for ${fieldKey} (source set to MANUAL)`);
+        results.updated++;
+      } else {
+        // No existing value, create new one
+        await prisma.fieldValue.create({
+          data: {
+            fieldId,
+            value: newValue,
+            source: 'MANUAL',
+            confidence: null,
+            modelUsed: null,
+            updatedById: userId
+          }
+        });
+        logger.info(`Created field value for ${fieldKey} (source: MANUAL)`);
+        results.saved++;
+      }
+      
+    } catch (error) {
+      logger.error(`Error saving manual field value for ${fieldKey}: ${error.message}`);
+      results.errors.push({ fieldKey, error: error.message });
+    }
+  }
+  
+  logger.info(`Manual field values - saved: ${results.saved}, updated: ${results.updated}, skipped: ${results.skipped}, errors: ${results.errors.length}`);
+  
+  return results;
+};
+
 module.exports = {
   generateAIPromptForSection,
   generateFieldValuesWithAI,
-  saveFieldValues
+  saveFieldValues,
+  saveManualFieldValues
 };

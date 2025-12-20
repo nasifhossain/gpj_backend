@@ -1,5 +1,5 @@
 const express = require('express');
-const { generateAIPromptForSection, generateFieldValuesWithAI } = require('../services/fieldValue.services');
+const { generateAIPromptForSection, generateFieldValuesWithAI, saveManualFieldValues } = require('../services/fieldValue.services');
 const authenticateAdmin = require('../libraries/auth/adminAuth');
 const logger = require('../helper/logger.helper');
 const authenticateClient = require('../libraries/auth/clientAuth');
@@ -146,6 +146,72 @@ router.post('/section/generate', authenticateClient, async (req, res) => {
     
     res.status(statusCode).json({
       error: error.message || 'Failed to generate field values',
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+  }
+});
+
+/**
+ * POST /fieldvalue/section/fill
+ * Manually fill field values for a section
+ * 
+ * Request Body:
+ * {
+ *   "sectionId": "uuid-string",
+ *   "fieldValues": {
+ *     "fieldKey1": "value1",
+ *     "fieldKey2": "value2"
+ *   }
+ * }
+ */
+router.post('/section/fill', authenticateClient, async (req, res) => {
+  try {
+    logger.access(`POST /fieldvalue/section/fill - User: ${req.user?.id}`);
+    
+    const { sectionId, fieldValues } = req.body;
+    
+    // Validate inputs
+    const errors = [];
+    
+    if (!sectionId || typeof sectionId !== 'string' || sectionId.trim().length === 0) {
+      errors.push('Section ID is required and must be a non-empty string');
+    }
+    
+    if (!fieldValues || typeof fieldValues !== 'object' || Object.keys(fieldValues).length === 0) {
+      errors.push('Field values is required and must be a non-empty object');
+    }
+    
+    if (errors.length > 0) {
+      logger.info(`Validation failed: ${JSON.stringify(errors)}`);
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors
+      });
+    }
+    
+    // Save manual field values
+    const result = await saveManualFieldValues(sectionId, fieldValues, req.user.id);
+    
+    logger.info(`Successfully saved manual field values for section: ${sectionId}`);
+    
+    res.status(200).json({
+      message: 'Field values saved successfully',
+      data: {
+        saved: result.saved,
+        updated: result.updated,
+        skipped: result.skipped,
+        errors: result.errors
+      }
+    });
+    
+  } catch (error) {
+    logger.error(`POST /fieldvalue/section/fill - Error: ${error.message}`);
+    logger.error(`Stack trace: ${error.stack}`);
+    
+    const statusCode = error.message.includes('not found') ? 404 : 500;
+    
+    res.status(statusCode).json({
+      error: error.message || 'Failed to save field values',
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
   }
