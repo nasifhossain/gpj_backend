@@ -40,7 +40,7 @@ const generateUploadUrl = async ({ key, expiresIn, contentType }) => {
   };
 };
 
-const saveDocument = async ({ briefId, fileName, fileType, s3Key, userId }) => {
+const saveDocument = async ({ briefId, fileName, fileType, s3Key, sectionId, userId }) => {
   // Validate inputs
   if (!briefId || typeof briefId !== 'string') {
     throw new Error('Brief ID is required and must be a string');
@@ -58,6 +58,13 @@ const saveDocument = async ({ briefId, fileName, fileType, s3Key, userId }) => {
     throw new Error('User ID is required and must be a string');
   }
   
+  // Validate sectionId if provided (optional)
+  if (sectionId !== undefined && sectionId !== null) {
+    if (typeof sectionId !== 'string' || sectionId.trim().length === 0) {
+      throw new Error('Section ID must be a non-empty string if provided');
+    }
+  }
+   
   // Validate file type
   const validFileTypes = ['PDF', 'PPTX', 'XLSX', 'IMAGE'];
   const upperFileType = fileType.toUpperCase();
@@ -75,7 +82,24 @@ const saveDocument = async ({ briefId, fileName, fileType, s3Key, userId }) => {
     throw new Error(`Brief not found with ID: ${briefId}`);
   }
   
-  logger.info(`Saving document: ${fileName} for brief: ${briefId}`);
+  // If sectionId is provided, verify it exists and belongs to the brief
+  if (sectionId) {
+    const section = await prisma.section.findUnique({
+      where: { id: sectionId }
+    });
+    
+    if (!section) {
+      throw new Error(`Section not found with ID: ${sectionId}`);
+    }
+    
+    if (section.briefId !== briefId) {
+      throw new Error(`Section ${sectionId} does not belong to brief ${briefId}`);
+    }
+    
+    logger.info(`Saving document: ${fileName} for brief: ${briefId}, section: ${sectionId}`);
+  } else {
+    logger.info(`Saving document: ${fileName} for brief: ${briefId} (no section)`);
+  }
   
   // Save document reference
   const document = await prisma.document.create({
@@ -84,6 +108,7 @@ const saveDocument = async ({ briefId, fileName, fileType, s3Key, userId }) => {
       fileName,
       fileType: upperFileType,
       s3Key,
+      sectionId: sectionId || null, // Set to null if not provided
       uploadedById: userId
     },
     include: {
@@ -99,7 +124,13 @@ const saveDocument = async ({ briefId, fileName, fileType, s3Key, userId }) => {
           id: true,
           title: true
         }
-      }
+      },
+      section: sectionId ? {
+        select: {
+          id: true,
+          sectionName: true
+        }
+      } : false
     }
   });
   

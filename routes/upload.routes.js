@@ -24,7 +24,7 @@ router.post('/confirm', authenticateClient, async (req, res) => {
   try {
     logger.access(`POST /upload/confirm - User: ${req.user?.userId}`);
     
-    const { briefId, fileName, fileType, s3Key } = req.body;
+    const { briefId, fileName, fileType, s3Key,sectionId } = req.body;
     
     // Validate required fields
     const missingFields = [];
@@ -46,6 +46,7 @@ router.post('/confirm', authenticateClient, async (req, res) => {
       fileName,
       fileType,
       s3Key,
+      sectionId,
       userId: req.user.id
     });
     

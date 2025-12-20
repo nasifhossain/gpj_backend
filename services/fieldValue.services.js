@@ -53,7 +53,8 @@ const saveFieldValues = async (sectionId, briefId, extractedData, modelUsed = 'g
       // Check if field value already exists (only by fieldId since briefId is not in FieldValue model)
       const existingValue = await prisma.fieldValue.findFirst({
         where: {
-          fieldId
+          fieldId,
+          updatedById: userId
         }
       });
       
@@ -555,7 +556,8 @@ const saveManualFieldValues = async (sectionId, fieldValues, userId) => {
       // Check if field value already exists
       const existingValue = await prisma.fieldValue.findFirst({
         where: {
-          fieldId
+          fieldId,
+          updatedById: userId
         }
       });
       
