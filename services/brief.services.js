@@ -72,6 +72,9 @@ const getBriefById = async (briefId, userId) => {
         }
       },
       documents: {
+        where: {
+          uploadedById: userId
+        },
         include: {
           uploadedBy: {
             select: {
