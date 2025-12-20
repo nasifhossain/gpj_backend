@@ -282,6 +282,8 @@ const generateAIPromptForSection = async (sectionId, s3Keys) => {
   combinedPrompt += `3. If you have ANY doubt, uncertainty, or cannot find clear evidence of the information, respond with 'Nil' for that field\n`;
   combinedPrompt += `4. Do NOT guess or make assumptions - if unsure, use 'Nil'\n`;
   combinedPrompt += `5. For PDFs, make sure to scan all pages and sections carefully, Pdf may have non text elements so be careful\n\n`;
+  combinedPrompt += `6. If you are not sure about the information, respond with 'Nil' for that field\n\n`;
+  combinedPrompt += `7. Give the output in industry standard format like date in dd-mm-yyyy format\n\n`;
   
   combinedPrompt += `## Fields to Extract\n\n`;
   
