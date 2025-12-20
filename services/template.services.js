@@ -121,6 +121,7 @@ const getAllTemplates = async () => {
   });
   
   return briefs.map(brief => ({
+    id: brief.id,
     title: brief.title,
     templateName: brief.templateName,
     sections: brief.sections.map(section => {
@@ -136,6 +137,7 @@ const getAllTemplates = async () => {
       
       return {
         sectionName: section.sectionName,
+        id: section.id,
         inputFields: Object.entries(fieldsByHeading).map(([heading, fields]) => ({
           fieldsHeading: heading,
           fields: fields.map(field => ({
@@ -153,7 +155,35 @@ const getAllTemplates = async () => {
   }));
 };
 
+const getTemplateById = async (id,userId) => {
+  const brief = await prisma.brief.findUnique({
+    where: { id },
+    include: {
+      sections: {
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          fields: {
+            include: {
+              values: {
+                where: {
+                  updatedById: userId
+                },
+                orderBy: {
+                  updatedAt: 'desc'
+                },
+                take: 1 // Get only the most recent value from this user
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+  
+  return brief;
+};
 module.exports = {
   createBriefFromTemplate,
-  getAllTemplates
+  getAllTemplates,
+  getTemplateById
 };
