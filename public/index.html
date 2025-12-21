@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPJ Input Assistant - API Documentation</title>
+    <meta name="description" content="Enterprise event brief management system with AI-powered document processing for IBM events.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #f1f3f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --border-color: #e5e7eb;
+            --accent-primary: #2563eb;
+            --accent-hover: #1d4ed8;
+            --success: #059669;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.875rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-bottom: 4rem;
+        }
+
+        .hero h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
+        }
+
+        .hero p {
+            font-size: 1.0625rem;
+            color: var(--text-secondary);
+            max-width: 720px;
+            line-height: 1.7;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin: 3rem 0;
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.75rem;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: block;
+            margin-bottom: 0.375rem;
+        }
+
+        .stat-label {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .feature-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .feature-card h3 {
+            font-size: 1.0625rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.625rem;
+        }
+
+        .feature-card p {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* API Endpoints */
+        .endpoint-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 0.75rem;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .endpoint-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .method-badge {
+            padding: 0.25rem 0.625rem;
+            border-radius: 4px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .method-get {
+            background: #ecfdf5;
+            color: var(--success);
+        }
+
+        .method-post {
+            background: #eff6ff;
+            color: var(--accent-primary);
+        }
+
+        .endpoint-path {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .endpoint-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 2rem 0;
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            text-align: center;
+        }
+
+        footer p {
+            font-size: 0.875rem;
+            color: var(--text-tertiary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 1.875rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .stats-grid,
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 2rem 1.25rem;
+            }
+
+            .header-content {
+                padding: 0 1.25rem;
+            }
+
+            .endpoint-header {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">GPJ Input Assistant</div>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span id="status-text">Online</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h1>Event Brief Management System</h1>
+            <p>Enterprise-grade API for managing IBM event briefs with AI-powered document processing, automated field extraction, and comprehensive workflow management.</p>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-number" id="user-count">—</span>
+                    <span class="stat-label">Active Users</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">6</span>
+                    <span class="stat-label">Brief Sections</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">4</span>
+                    <span class="stat-label">Document Formats</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">3</span>
+                    <span class="stat-label">User Roles</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Core Capabilities</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>AI Document Processing</h3>
+                    <p>Automated field extraction from PDF, PPTX, XLSX, and DOCX files using Google Generative AI with confidence scoring.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Structured Brief Management</h3>
+                    <p>Comprehensive event briefs covering project overview, stakeholders, objectives, client experience, and deliverables.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Role-Based Access Control</h3>
+                    <p>Secure authentication with granular permissions for Admin, GPJ, and Client user roles.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Cloud Document Storage</h3>
+                    <p>AWS S3 integration with presigned URLs for secure, scalable document upload and retrieval.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Approval Workflows</h3>
+                    <p>Status tracking through draft, in-progress, awaiting approval, and approved states with audit logging.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>Data Source Tracking</h3>
+                    <p>Complete provenance tracking for field values with AI, manual, and spreadsheet source attribution.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">API Endpoints</h2>
+            
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method-badge method-get">GET</span>
+                    <span class="endpoint-path">/health</span>
+                </div>
+                <div class="endpoint-description">System health check endpoint</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/users/login</span>
+                </div>
+                <div class="endpoint-description">User authentication and JWT token generation</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method-badge method-get">GET</span>
+                    <span class="endpoint-path">/briefs/templates</span>
+                </div>
+                <div class="endpoint-description">Retrieve available brief templates</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/briefs/from-template</span>
+                </div>
+                <div class="endpoint-description">Create new brief from template</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method-badge method-get">GET</span>
+                    <span class="endpoint-path">/briefs/:id</span>
+                </div>
+                <div class="endpoint-description">Retrieve brief with sections, fields, and values</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/upload/presigned-url</span>
+                </div>
+                <div class="endpoint-description">Generate S3 presigned URL for document upload</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/sections/:id/generate</span>
+                </div>
+                <div class="endpoint-description">AI-powered field generation from documents</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method-badge method-post">POST</span>
+                    <span class="endpoint-path">/fieldvalue/manual</span>
+                </div>
+                <div class="endpoint-description">Manual field value update with source tracking</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2024 GPJ Input Assistant. Powered by Google Generative AI and AWS.</p>
+        </div>
+    </footer>
+
+    <script>
+        async function updateStats() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    document.getElementById('status-text').textContent = 'Online';
+                }
+            } catch (error) {
+                document.getElementById('status-text').textContent = 'Offline';
+            }
+        }
+
+        updateStats();
+    </script>
+</body>
+</html>

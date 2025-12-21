@@ -13,17 +13,22 @@ const PORT = process.env.PORT || 8000;
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from public directory
+app.use(express.static('public'));
+
 // Health check endpoint (no DB queries for fast response)
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// Sample route
+// Root route - serves the landing page
 app.get('/', async (req, res) => {
   const prisma = require('./config/prisma.client').prisma;
   const users = await prisma.user.count();
   logger.access(`GET / - Users count: ${users}`);
-  res.send('Hello World!, Users: ' + JSON.stringify(users));
+  
+  // Send the HTML file
+  res.sendFile(__dirname + '/public/index.html');
 });
 
 // Routes
