@@ -102,6 +102,7 @@ const saveDocument = async ({ briefId, fileName, fileType, s3Key, sectionId, use
   }
   
   // Save document reference
+  logger.info(`Saving document: ${fileName} for brief: ${briefId}, section: ${sectionId}, user: ${userId}`);
   const document = await prisma.document.create({
     data: {
       briefId,
