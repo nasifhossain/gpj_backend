@@ -33,7 +33,7 @@ const loginUser = async (email, password) => {
     throw new Error('Invalid password');
   }
   const { password: _,createdAt, ...userWithoutPassword } = user;
-  const token = generateToken({ id: user.id, email: user.email, role: user.role }, { expiresIn: '24h' });
+  const token = generateToken({ id: user.id, email: user.email,name: user.name, role: user.role }, { expiresIn: '24h' });
   userWithoutPassword.token = token; 
   return userWithoutPassword;
 };
