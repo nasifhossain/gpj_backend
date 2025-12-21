@@ -1,12 +1,18 @@
 
 const prisma = require('../config/prisma.client').prisma;
- const bcrypt = require('bcrypt');
-const {generateToken} = require('../libraries/jwt/jwt');
+const bcrypt = require('bcrypt');
+const { generateToken } = require('../libraries/jwt/jwt');
 // const prisma = new PrismaClient();
 
 const createUser = async (userData) => {
-  const { name, email, role,password } = userData;
+  const { name, email, role, password } = userData;
   const hashedPassword = await bcrypt.hash(password, 10);
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
+  });
+  if (existingUser) {
+    throw new Error('User already exists');
+  }
   const user = await prisma.user.create({
     data: {
       name,
@@ -15,8 +21,8 @@ const createUser = async (userData) => {
       password: hashedPassword
     }
   });
-  
-  return user;
+  const userWithoutPassword = { ...user, password: undefined, createdAt: undefined }
+  return userWithoutPassword;
 };
 
 const loginUser = async (email, password) => {
@@ -32,9 +38,9 @@ const loginUser = async (email, password) => {
   if (!isPasswordValid) {
     throw new Error('Invalid password');
   }
-  const { password: _,createdAt, ...userWithoutPassword } = user;
-  const token = generateToken({ id: user.id, email: user.email,name: user.name, role: user.role }, { expiresIn: '24h' });
-  userWithoutPassword.token = token; 
+  const { password: _, createdAt, ...userWithoutPassword } = user;
+  const token = generateToken({ id: user.id, email: user.email, name: user.name, role: user.role }, { expiresIn: '24h' });
+  userWithoutPassword.token = token;
   return userWithoutPassword;
 };
 
