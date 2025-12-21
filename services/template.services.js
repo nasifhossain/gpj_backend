@@ -155,6 +155,97 @@ const getAllTemplates = async () => {
   }));
 };
 
+const getAllTemplatesPreview = async () => {
+  const briefs = await prisma.brief.findMany({
+    include: {
+      sections: {
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          fields: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+  
+  // Get submission users for all briefs in parallel
+  const briefsWithSubmissions = await Promise.all(
+    briefs.map(async (brief) => {
+      // Get all field IDs for this brief
+      const fieldIds = brief.sections.flatMap(section => 
+        section.fields.map(field => field.id)
+      );
+      
+      // Get unique user IDs who have submitted field values
+      let submissions = [];
+      if (fieldIds.length > 0) {
+        const uniqueUserIds = await prisma.fieldValue.groupBy({
+          by: ['updatedById'],
+          where: {
+            fieldId: {
+              in: fieldIds
+            }
+          }
+        }).then(results => results.map(r => r.updatedById));
+        
+        // Fetch user details for each unique user
+        if (uniqueUserIds.length > 0) {
+          submissions = await prisma.user.findMany({
+            where: {
+              id: {
+                in: uniqueUserIds
+              }
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          });
+        }
+      }
+      
+      return {
+        id: brief.id,
+        title: brief.title,
+        templateName: brief.templateName,
+        submissions,
+        sections: brief.sections.map(section => {
+          // Group fields by fieldHeading
+          const fieldsByHeading = section.fields.reduce((acc, field) => {
+            const heading = field.fieldHeading || 'Basic Details';
+            if (!acc[heading]) {
+              acc[heading] = [];
+            }
+            acc[heading].push(field);
+            return acc;
+          }, {});
+          
+          return {
+            sectionName: section.sectionName,
+            id: section.id,
+            inputFields: Object.entries(fieldsByHeading).map(([heading, fields]) => ({
+              fieldsHeading: heading,
+              fields: fields.map(field => ({
+                inputName: field.label,
+                dataType: field.dataType,
+                fieldType: field.fieldType,
+                options: field.options?.dropdownOptions || undefined,
+                helperText: field.options?.helperText || undefined,
+                inputValue: field.options?.defaultValue || undefined,
+                prompt: field.prompt || undefined
+              }))
+            }))
+          };
+        })
+      };
+    })
+  );
+  
+  return briefsWithSubmissions;
+};
+
 const getTemplateById = async (id,userId) => {
   const brief = await prisma.brief.findUnique({
     where: { id },
@@ -185,5 +276,6 @@ const getTemplateById = async (id,userId) => {
 module.exports = {
   createBriefFromTemplate,
   getAllTemplates,
-  getTemplateById
+  getTemplateById,
+  getAllTemplatesPreview 
 };

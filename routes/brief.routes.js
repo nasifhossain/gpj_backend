@@ -1,6 +1,6 @@
 const express = require('express');
 const { createBrief, getBriefById } = require('../services/brief.services');
-const { createBriefFromTemplate, getAllTemplates, getTemplateById } = require('../services/template.services');
+const { createBriefFromTemplate, getAllTemplates, getTemplateById, getAllTemplatesPreview } = require('../services/template.services');
 const authenticateAdmin = require('../libraries/auth/adminAuth');
 const authenticateClient = require('../libraries/auth/clientAuth');
 const logger = require('../helper/logger.helper');
@@ -84,6 +84,19 @@ router.get('/templates', async (req, res) => {
   }
 });
 
+
+/**
+ * Templates Preview
+ */
+router.get('/templates/preview', async (req, res) => {
+  try {
+    const templates = await getAllTemplatesPreview();
+    res.status(200).json(templates);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * GET /briefs/templates/:id
  * Get a specific template by ID with user's saved field values
@@ -105,6 +118,39 @@ router.get('/templates/:id', authenticateClient, async (req, res) => {
     }
     
     logger.info(`Successfully retrieved template: ${id} for user: ${req.user.id}`);
+    
+    res.status(200).json({
+      message: 'Template retrieved successfully',
+      data: template
+    });
+    
+  } catch (error) {
+    logger.error(`GET /briefs/templates/:id - Error: ${error.message}`);
+    
+    res.status(500).json({
+      error: error.message || 'Failed to retrieve template'
+    });
+  }
+});
+
+
+router.get('/templates/:id/user/:userId', authenticateAdmin, async (req, res) => {
+  try {
+ 
+    
+    const { id, userId } = req.params;
+    
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Valid template ID is required' });
+    }
+    
+    const template = await getTemplateById(id, userId);
+    
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    
+    logger.info(`Successfully retrieved template: ${id} for user: ${userId}`);
     
     res.status(200).json({
       message: 'Template retrieved successfully',
