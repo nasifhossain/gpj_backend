@@ -77,7 +77,28 @@ router.put('/from-template', authenticateAdmin, async (req, res) => {
   }
 });
 
+router.post('/from-template', authenticateAdmin, async (req, res) => {
+  try {
+    const template = req.body;
+    const title = template.title || 'New Brief';
+    if (!template || typeof template !== 'object') {
+      return res.status(400).json({ error: 'Template object is required' });
+    }
 
+    if (!template.templateName || typeof template.templateName !== 'string') {
+      return res.status(400).json({ error: 'Template name is required' });
+    }
+
+    if (!Array.isArray(template.sections) || template.sections.length === 0) {
+      return res.status(400).json({ error: 'Template must have at least one section' });
+    }
+
+    const brief = await createBriefFromTemplate(template, req.user.id, title);
+    res.status(201).json(brief);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
 
 
 router.get('/templates', async (req, res) => {
