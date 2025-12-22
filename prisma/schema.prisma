@@ -161,7 +161,7 @@ model Document {
   sectionId    String?
   fileName     String
   fileType     DocumentType
-  s3Key        String
+  s3Key        String       @unique
 
   uploadedById String
   uploadedBy   User         @relation(fields: [uploadedById], references: [id])

@@ -12,7 +12,7 @@ const authenticateClient = (req, res, next) => {
     const token = authHeader.substring(7);
 
     const decoded = verifyToken(token);
-    if(decoded.role !== 'CLIENT') {
+    if (decoded.role !== 'CLIENT' && decoded.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Access denied' });
     }
     req.user = decoded;
