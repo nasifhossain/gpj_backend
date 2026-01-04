@@ -65,6 +65,17 @@ const saveFieldValues = async (sectionId, briefId, extractedData, modelUsed = 'g
         continue;
       }
       
+      // Convert value to string for storage
+      // Handle objects by converting to JSON string
+      let stringValue;
+      if (value === null || value === undefined) {
+        stringValue = '';
+      } else if (typeof value === 'object') {
+        stringValue = JSON.stringify(value);
+      } else {
+        stringValue = String(value);
+      }
+      
       // Determine confidence based on value
       let confidence = 0.85;
       if (value === 'Nil' || value === null || value === '') {
@@ -78,7 +89,7 @@ const saveFieldValues = async (sectionId, briefId, extractedData, modelUsed = 'g
             id: existingValue.id
           },
           data: {
-            value: value === null ? '' : String(value),
+            value: stringValue,
             source: 'AI',
             confidence,
             modelUsed,
@@ -91,7 +102,7 @@ const saveFieldValues = async (sectionId, briefId, extractedData, modelUsed = 'g
         await prisma.fieldValue.create({
           data: {
             fieldId,
-            value: value === null ? '' : String(value),
+            value: stringValue,
             source: 'AI',
             confidence,
             modelUsed,
@@ -542,15 +553,14 @@ const saveManualFieldValues = async (sectionId, fieldValues, userId) => {
     fieldMap[field.fieldKey] = field.id;
   });
   
-  // Process each field value
-  for (const [fieldKey, value] of Object.entries(fieldValues)) {
+  // Process each field value in parallel
+  const fieldOperations = Object.entries(fieldValues).map(async ([fieldKey, value]) => {
     try {
       const fieldId = fieldMap[fieldKey];
       
       if (!fieldId) {
         logger.error(`Field not found for key: ${fieldKey} in section: ${sectionId}`);
-        results.errors.push({ fieldKey, error: 'Field not found' });
-        continue;
+        return { status: 'error', fieldKey, error: 'Field not found' };
       }
       
       // Check if field value already exists
@@ -562,7 +572,15 @@ const saveManualFieldValues = async (sectionId, fieldValues, userId) => {
       });
       
       // Convert value to string for comparison and storage
-      const newValue = value === null || value === undefined ? '' : String(value);
+      // Handle objects by converting to JSON string
+      let newValue;
+      if (value === null || value === undefined) {
+        newValue = '';
+      } else if (typeof value === 'object') {
+        newValue = JSON.stringify(value);
+      } else {
+        newValue = String(value);
+      }
       
       // Create or update the field value
       if (existingValue) {
@@ -574,8 +592,7 @@ const saveManualFieldValues = async (sectionId, fieldValues, userId) => {
         if (existingValueStr === newValue) {
           // Value hasn't changed, skip update
           logger.info(`Skipping field ${fieldKey}: value unchanged`);
-          results.skipped++;
-          continue;
+          return { status: 'skipped' };
         }
         
         // Value has changed, update it and set source to MANUAL
@@ -586,13 +603,13 @@ const saveManualFieldValues = async (sectionId, fieldValues, userId) => {
           data: {
             value: newValue,
             source: 'MANUAL',
-            confidence: null, // Manual entries don't have confidence scores
-            modelUsed: null,  // Manual entries don't use AI models
+            confidence: null,
+            modelUsed: null,
             updatedById: userId
           }
         });
         logger.info(`Updated field value for ${fieldKey} (source set to MANUAL)`);
-        results.updated++;
+        return { status: 'updated' };
       } else {
         // No existing value, create new one
         await prisma.fieldValue.create({
@@ -606,14 +623,28 @@ const saveManualFieldValues = async (sectionId, fieldValues, userId) => {
           }
         });
         logger.info(`Created field value for ${fieldKey} (source: MANUAL)`);
-        results.saved++;
+        return { status: 'saved' };
       }
-      
     } catch (error) {
       logger.error(`Error saving manual field value for ${fieldKey}: ${error.message}`);
-      results.errors.push({ fieldKey, error: error.message });
+      return { status: 'error', fieldKey, error: error.message };
     }
-  }
+  });
+
+  const operationResults = await Promise.all(fieldOperations);
+
+  // Aggregate results
+  operationResults.forEach(result => {
+    if (result.status === 'saved') {
+      results.saved++;
+    } else if (result.status === 'updated') {
+      results.updated++;
+    } else if (result.status === 'skipped') {
+      results.skipped++;
+    } else if (result.status === 'error') {
+      results.errors.push({ fieldKey: result.fieldKey, error: result.error });
+    }
+  });
   
   logger.info(`Manual field values - saved: ${results.saved}, updated: ${results.updated}, skipped: ${results.skipped}, errors: ${results.errors.length}`);
   
